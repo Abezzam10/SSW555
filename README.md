@@ -6,6 +6,7 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 
 1. [Intro of GEDCOM](#1.-intro-of-gedcom)
 2. [Project precondition](#2.-project-precondition)
+3. [Installation & PyPI](#3.-installation--pypi)
 
 ## 1. Intro of GEDCOM
 
@@ -96,3 +97,22 @@ We are writing a **program** that looks for ***Error*** and ***Anomalies***.
   - Being a spouse in two marriages at the same time (polygamy, illegal in most places)
 
 We are going to define two `class`es to represent errors and anomalies respectively.
+
+## 3. Installation & PyPI
+
+The version 0.0.0 of this application has been published on the [PyPI](https://pypi.org), you can find the package on PyPI through this [**link**](https://pypi.org/project/GEDCOM-Benji/), you can also install the package with `pip`:
+
+```py
+pip install gedcom-benji
+```
+
+> The content after [3. PyPI](#3.-pypi) hasn't been updated on the PyPI yet.
+
+After installing the package, you can use terminal with the command 
+
+```sh
+gedcom /your/gedcom/file/path
+```
+
+to see the newest functionality of the application. Right now, it just process each line of the GEDCOM file and return an output on stdout.
+
