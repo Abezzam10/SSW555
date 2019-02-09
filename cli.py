@@ -2,7 +2,7 @@
 
 import os
 import click
-from gedcom_benji import Gedcom
+from gedcom_ajry import Gedcom
 
 @click.command()
 @click.argument('gedfile')
