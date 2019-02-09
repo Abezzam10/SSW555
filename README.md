@@ -1,6 +1,28 @@
-# Error Distinguishing Program for GEDCOM
+# SSW555 TeamAJRY: GEDCOM CLI
 
-This is a project for the SSW555 of Stevens Institute of Technology taught by geekiest professor Jim Rowland :P
+This is a project for the SSW555 of Stevens Institute of Technology taught by geekiest professor Jim Rowland.
+
+---
+- **Team Member**:
+  - Yinghui Cai(Benji)
+  - Rahil Patel(Ray)
+  - Aniruddha Pimple(John)
+  - Jiahua Zhou(Javer)
+
+- **User stories for sprint 1**:
+
+|Story ID|Story Name|Owner|
+|:---:|:---:|:---:|
+|US01|Dates before current date|Javer|
+|US02|Birth before marriage|Ray|
+|US03|Birth before death|John|
+|US05|Marriage before death|John|
+|US06|Divorce before death|Benji|
+|US11|No bigamy|Ray|
+|US20|Aunts and uncles|Benji|
+|US22|Unique IDs|Javer|
+
+---
 
 ## 0. Table of Content
 
