@@ -23,7 +23,7 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
     keywords='Stevens_Institute_of_Technology SSW555 CS555',
-    py_modules=['cli', 'gedcom_benji'],
+    py_modules=['cli', 'gedcom_ajry'],
     install_requires=['Click', 'tabulate'],
     entry_points={
         'console_scripts': [

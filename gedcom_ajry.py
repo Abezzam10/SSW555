@@ -48,9 +48,9 @@ class Gedcom:
             raise FileNotFoundError(f'Error: can\'t read data file {self.path}.')
         else:
             with fp:
-                for line in fp:
+                for ln_ind, line in enumerate(fp):
                     try:
-                        data = self._line_processor(line.strip())
+                        data = ln_ind, *self._line_processor(line.strip())
                     except ValueError as err:
                         pass  # do nothing for now
                     else:
@@ -104,7 +104,7 @@ class Gedcom:
         curr_cat = None
         # curr_attr = {}
 
-        for lvl, tag, arg in data_iter:
+        for ln_ind, lvl, tag, arg in data_iter:
 
             if lvl == '0' and tag in cat_pool:  # find a new entity
                 if curr_entity:  # update the current entity in data containers
@@ -118,7 +118,7 @@ class Gedcom:
                 attr = attr_map[curr_cat][tag]
 
                 if tag in ('BIRT', 'DEAT', 'MARR', 'DIV'):  # the arg are None, go to next line get the arg for val
-                    lvl, tag, arg = next(data_iter)
+                    ln_ind, lvl, tag, arg = next(data_iter)
                     #if tag == '2' and arg == 'DATE' *NOTE* this is not needed for this project as we assume this is not grammar error
                     curr_entity[attr] = datetime.strptime(arg, Gedcom.dt_fmt)
 
