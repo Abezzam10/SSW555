@@ -29,6 +29,7 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 1. [Installation & PyPI](#1-installation--pypi)
 2. [Test Strategy](#2-test-strategy)
 3. [Project Overview Link](Project_overview.md)
+4. [Coding Style Guideline](coding_style_specification.md)
 
 ## 1 Installation & PyPI
 
@@ -49,3 +50,7 @@ pip install gedcom-ajry
 ## 3 Project Overview
 
 To keep the README nice and clean, we have the *project overview* and *random ideas list* wrapped up in another [file](Project_overview.md). Feel free to check it out!
+
+## 4 Coding Style Specification
+
+Please see the [file](coding_style_specification.md) for the naming pattern suggestions.
