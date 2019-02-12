@@ -28,6 +28,7 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 
 1. [Installation & PyPI](#1-installation--pypi)
 2. [Test Strategy](#2-test-strategy)
+3. [Project Overview Link](Project_overview.md)
 
 ## 1 Installation & PyPI
 
@@ -44,3 +45,7 @@ pip install gedcom-ajry
   - **one weired cases for each modified file**
   - (**to be discussed**)merge the modified files the same time merging the tested code
 - [ ] Expecting the program can find these weired cases.
+
+## 3 Project Overview
+
+To keep the README nice and clean, we have the *project overview* and *random ideas list* wrapped up in another [file](Project_overview.md). Feel free to check it out!
