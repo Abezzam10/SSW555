@@ -34,7 +34,7 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 The version 1.0.0 of this application has been published on the [PyPI](https://pypi.org), you can find the package on PyPI through this [**link**](https://pypi.org/project/GEDCOM-Benji/), you can also install the package with `pip`:
 
 ```py
-pip install gedcom-benji
+pip install gedcom-ajry
 ```
 
 ## 2 Test Strategy 
