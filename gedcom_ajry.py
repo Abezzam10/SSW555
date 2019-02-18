@@ -3,10 +3,15 @@
 import os
 import re
 import json
+import pymongo
+import subprocess
+from pymongo import MongoClient
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
 
+DBPATH = '/Users/benjamin/data/db'
+PORT = '27018'
 
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
@@ -29,11 +34,18 @@ class Gedcom:
         self.raw_data = []
         self.indis = {}
         self.fams = {}
+        self.client = None
         self.path_validate()
         
         self.data_parser()
         self.lst_to_obj()
         self.pretty_print()
+
+        # NOTE: code below can be deleted
+        cllect_ref = self.build_mongo()
+        for doc in cllect_ref.find({'cat': 'fam'}):
+            print(doc['_id'], doc['marr_dt'])
+        self.erase_mongo()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -156,6 +168,30 @@ class Gedcom:
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
 
+    def build_mongo(self):
+        """ invoke this method everytime at the start of the userstory
+            create a mongodb and insert the data
+            store the mongo client as an instance attr
+            return a collection reference for use in user story method
+        """
+        subprocess.Popen(['mongod', '--port', PORT, '--dbpath', DBPATH])
+        indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
+        fam_mg = [f.mongo_data() for f in self.fams.values()]
+        
+        self.client = MongoClient('localhost', 27018)
+        db = self.client['gedcom']
+        
+        entts = db['entity']
+        entts.insert_many([*indi_mg, *fam_mg])
+
+        return entts
+
+    def erase_mongo(self):
+        """ invoke this method every time at the end of the use story"""
+        db = self.client['gedcom']
+        db.drop_collection('entity')
+        self.client.close()
+        self.client = None
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -173,6 +209,10 @@ class Entity:
             self.__dict__[attr] = val
         else:
             raise AttributeError(f'Attribute {attr} not found')
+
+    def mongo_data(self):
+        """ return a dictionary with mongodb data for database"""
+        raise NotImplementedError('Method hasn\'t been implemented yet.')
 
     def pp_row(self):
         """ Return a row for command line pretty print"""
@@ -201,6 +241,20 @@ class Individual(Entity):
         else:
             return 'No birth date.'
 
+    def mongo_data(self):
+        """ return a dictionary with mongodb data for database"""
+        return {
+            '_id': self.indi_id,
+            'cat': 'indi',  # only used for mongodb to distinguish entity catagory
+            'name': self.name,
+            'sex': self.sex,
+            'birt_dt': self.birt_dt,
+            'deat_dt': self.deat_dt,
+            'age': self.age,
+            'fam_c': self.fam_c,
+            'fam_s': self.fam_s
+        }
+
     def pp_row(self):
         """ return a data sequence:
             [ID, Name, Gender, Birthday, Age, Alive, Death, Child, Spouse]
@@ -221,6 +275,18 @@ class Family(Entity):
         self.husb_id = ''
         self.wife_id = ''
         self.chil_id = set()  # chil_id = set of indi_id
+
+    def mongo_data(self):
+        """ return a dictionary with mongodb data for database"""
+        return {
+            '_id': self.fam_id,
+            'cat': 'fam',
+            'marr_dt': self.marr_dt,
+            'div_dt': self.div_dt,
+            'husb_id': self.husb_id,
+            'wife_id': self.wife_id,
+            'chil_id': list(self.chil_id)
+        }
 
     def pp_row(self):
         """ return a data sequence:
