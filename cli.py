@@ -7,5 +7,6 @@ from gedcom_ajry import Gedcom
 @click.command()
 @click.argument('gedfile')
 def gedcom(gedfile):
-    Gedcom(gedfile)
+    Gedcom(gedfile).pretty_print()
+
     
