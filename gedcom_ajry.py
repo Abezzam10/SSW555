@@ -4,15 +4,44 @@ import os
 import re
 import json
 import pymongo
-import subprocess
+from subprocess import Popen, PIPE
 from pymongo import MongoClient
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
 
-DBPATH = '/Users/benjamin/data/db'
-PORT = '27018'
 
+class ShellxMongo:
+    """ A class that wrap the shell commands needed for establish the mongo deamon silently
+        and kill the process gracefully 
+    """
+
+    HOME = os.path.expanduser('~')
+    PORT = '27018'
+
+    @property
+    def dbpath(self):
+        """ create directory ~/data/db if not exists"""
+        dbpath = os.path.join(ShellxMongo.HOME, 'data', 'db')
+        if not os.path.isdir(dbpath):  # ~/data/db not exist
+            os.makedirs(dbpath)
+        return dbpath
+
+    def run_mongod(self):
+        """ set up the MongoDB instance, but silently
+            also get the backgroud pid of mongod 
+        """
+        process = Popen(f'mongod --fork --syslog --port {ShellxMongo.PORT} --dbpath {self.dbpath}', shell=True, stdout=PIPE)  # create the MongoDB deamon in the background
+        
+        # get the process id so that after the operation we can kill the MongoDB instance
+        process_msg = process.stdout.read().decode()
+        pid_pattern = r'forked process: ([\d]+)'
+        self.pid = re.search(pid_pattern, process_msg).group(1)
+
+    def kill_mongo(self):
+        """ kill the backgroud process of mongod"""
+        Popen(f'kill {self.pid}', shell=True)
+        
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
         and look for errors and anomalies.
@@ -34,18 +63,14 @@ class Gedcom:
         self.raw_data = []
         self.indis = {}
         self.fams = {}
-        self.client = None
         self.path_validate()
-        
-        self.data_parser()
-        self.lst_to_obj()
-        self.pretty_print()
 
-        # NOTE: code below can be deleted
-        cllect_ref = self.build_mongo()
-        for doc in cllect_ref.find({'cat': 'fam'}):
-            print(doc['_id'], doc['marr_dt'])
-        self.erase_mongo()
+        self.mongod = ShellxMongo()  # shell function wrapper
+        self.client = None  # mongo client
+        
+        self.data_parser()  # processing data
+        self.lst_to_obj()
+        #self.pretty_print()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -168,13 +193,12 @@ class Gedcom:
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
 
-    def build_mongo(self):
+    def _build_mongo(self):
         """ invoke this method everytime at the start of the userstory
             create a mongodb and insert the data
             store the mongo client as an instance attr
             return a collection reference for use in user story method
         """
-        subprocess.Popen(['mongod', '--port', PORT, '--dbpath', DBPATH])
         indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
         fam_mg = [f.mongo_data() for f in self.fams.values()]
         
@@ -186,12 +210,37 @@ class Gedcom:
 
         return entts
 
-    def erase_mongo(self):
+    def _drop_mongo(self):
         """ invoke this method every time at the end of the use story"""
         db = self.client['gedcom']
         db.drop_collection('entity')
         self.client.close()
         self.client = None
+
+    def us65536_example(self):
+        """ this is an example for using mongodb in our progamming
+            if you are using MongoDB in your implementation of the use stories, following lines of code are mandatory.
+            The process for using a mongodb is
+              1. Establish the MongoDB deamon, I wrap it up in ShellxMongo to make it run in the background silently.
+              2. Create a connection to MongoDB using MongoClient in pymongo, the wrapper function will return a reference
+                 of the collection and you can use it to do all the NoSQL operations.
+              3. implement your code.
+              4. After your code finishs, drop all the data(I'll specify the reason in stand up meeting)
+              5. Kill the background process using ShellxMongo's method
+        """
+        self.mongod.run_mongod()  # Step 1: create a MongoDB instance in the background
+        collection_of_all_entities = self._build_mongo()  # Step 2: create mongo client in python, insert all of the data
+
+        # Step 3: implement your code
+        # this 'collection_of_all_entities' is the reference to the collection
+        # query operations are wrapped up by pymongo
+        # here is an example for using this reference object
+        for doc in collection_of_all_entities.find({'cat': 'fam'}):
+            fam_id, marr_dt = doc['_id'], doc['marr_dt'].strftime('%d %b %Y')
+            print(f'Family entity ID: {fam_id}, spouses married at {marr_dt}')  # print the id and marriage date of every family entity
+
+        self._drop_mongo()  # Step 4: drop all of the data
+        self.mongod.kill_mongo()  # Step 5: kill the process of mongod run in the background
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -299,6 +348,8 @@ class Family(Entity):
 def main():
     """ Entrance"""
     gdm = Gedcom('/Users/benjamin/Documents/Python_Scripts/SSW555/GEDCOM_files/proj01.ged')
+    gdm.pretty_print()
+    gdm.us65536_example()
 
 if __name__ == "__main__":
     main()
