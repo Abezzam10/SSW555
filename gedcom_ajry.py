@@ -36,7 +36,7 @@ class Gedcom:
         
         self.data_parser()  # processing data
         self.lst_to_obj()
-        self.pretty_print()
+        # self.pretty_print()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
