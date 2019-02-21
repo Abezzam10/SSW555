@@ -160,6 +160,24 @@ class Gedcom:
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
 
+    def date_validate(self):
+        """ validate the date from the local gedcom file 
+            Notes: will have another validation method for the mongo db
+        """
+        current_date = datetime.now()
+        # for individuals' date
+        for uid, indi in self.indis.items():
+            if indi.birt_dt > current_date:
+                print("birth time should not be after the current date")
+            if indi.deat_dt > current_date:
+                print("Death date should not be after than current date")
+
+        # for families' date
+        for uid, fam in self.fams.items():
+            if fam.marr_dt > current_date:
+                print("Marriage date should not be after the current date")
+            if fam.div_dt > current_date:
+                print("Divorce date should not be after the current date")  
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -279,8 +297,9 @@ class Error:
 
 def main():
     """ Entrance"""
-    gdm = Gedcom('GEDCOM_files/us06_neg.ged')
-    gdm.pretty_print()
+    gdm = Gedcom('./GEDCOM_files/proj02_test_by_javer.ged')
+    gdm.date_validate()
+    # gdm.pretty_print()
 
 if __name__ == "__main__":
     main()
