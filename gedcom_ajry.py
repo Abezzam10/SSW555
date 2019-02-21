@@ -67,6 +67,7 @@ class Gedcom:
 
         self.mongod = ShellxMongo()  # shell function wrapper
         self.client = None  # mongo client
+        self._cleanup()
         
         self.data_parser()  # processing data
         self.lst_to_obj()
@@ -168,6 +169,7 @@ class Gedcom:
 
                 else:
                     curr_entity[attr] = arg
+        cat_cont[curr_cat][curr_id] = curr_entity
 
     def pretty_print(self):
         """ put everything in a fancy table
@@ -217,6 +219,13 @@ class Gedcom:
         self.client.close()
         self.client = None
 
+    def _cleanup(self):
+        """ everytime running the program, clean it up"""
+        self.mongod.run_mongod()
+        self.client = MongoClient('localhost', 27018)
+        self._drop_mongo()
+        self.mongod.kill_mongo()
+
     def us65536_example(self):
         """ this is an example for using mongodb in our progamming
             if you are using MongoDB in your implementation of the use stories, following lines of code are mandatory.
@@ -236,11 +245,43 @@ class Gedcom:
         # query operations are wrapped up by pymongo
         # here is an example for using this reference object
         for doc in collection_of_all_entities.find({'cat': 'fam'}):
-            fam_id, marr_dt = doc['_id'], doc['marr_dt'].strftime('%d %b %Y')
-            print(f'Family entity ID: {fam_id}, spouses married at {marr_dt}')  # print the id and marriage date of every family entity
+            #fam_id, marr_dt = doc['_id'], doc['marr_dt'].strftime('%d %b %Y')
+            #print(f'Family entity ID: {fam_id}, spouses married at {marr_dt}')  # print the id and marriage date of every family entity
+            print(doc)
 
         self._drop_mongo()  # Step 4: drop all of the data
         self.mongod.kill_mongo()  # Step 5: kill the process of mongod run in the background
+
+    def us06_divorce_before_death(self):
+        """ Benji, Feb 18th, 2019\n
+            US06: Divorce before death\n
+            Divorce can only occur before death of both spouses
+        """
+        self.mongod.run_mongod()
+        ref = self._build_mongo()
+
+        for fam in ref.find({'cat': 'fam', 'div_dt': {'$ne': None}}):  # find all the divorced family
+            husb, wife = ref.find_one({'_id': fam['husb_id']}), ref.find_one({'_id': fam['wife_id']})
+            
+            if husb['deat_dt'] and husb['deat_dt'] < fam['div_dt']:
+                print(
+                    Error.err06(
+                        fam_id=fam['_id'], div_dt=fam['div_dt'].strftime('%d %b, %Y'),
+                        spouse_id=husb['_id'], spouse='husband', spouse_name=husb['name'], spouse_deat_dt=husb['deat_dt'].strftime('%d %b, %Y')
+                    )
+                )
+            
+            if wife['deat_dt'] and wife['deat_dt'] < fam['div_dt']:
+                print(
+                    Error.err06(
+                        fam_id=fam['_id'], div_dt=fam['div_dt'].strftime('%d %b, %Y'),
+                        spouse_id=wife['_id'], spouse='wife', spouse_name=wife['name'], spouse_deat_dt=wife['deat_dt'].strftime('%d %b, %Y')
+                    )
+                )
+
+        self._drop_mongo()
+        self.mongod.kill_mongo()
+
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -344,12 +385,33 @@ class Family(Entity):
         return self.fam_id, self.marr_dt.strftime('%Y-%m-%d'), self.div_dt.strftime('%Y-%m-%d') if self.div_dt else 'NA', \
             self.husb_id, self.wife_id, ', '.join(self.chil_id) if self.chil_id else 'NA'
 
+class Error:
+    """ A class used to bundle up all of the error message
+        the method naming pattern is err[us_ID](*args, *kwargs)
+    """
+    header = 'Error {}: '
+
+    @classmethod
+    def err06(self, us_id='US06', fam_id='', div_dt='', spouse_id='', spouse='', spouse_name='', spouse_deat_dt='', VERBOSE=False):
+        """ return error message for User Stroy 06"""
+        if VERBOSE:
+            return Error.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
+                f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}'
+        return Error.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.'
 
 def main():
     """ Entrance"""
-    gdm = Gedcom('/Users/benjamin/Documents/Python_Scripts/SSW555/GEDCOM_files/proj01.ged')
-    gdm.pretty_print()
-    gdm.us65536_example()
+    #gdm_neg = Gedcom('GEDCOM_files/us06_neg.ged')
+    #gdm_neg.pretty_print()
+    #gdm_neg.us06_divorce_before_death()
+    mongod = ShellxMongo()
+
+    print('estabilishing MongoDB deamon')
+    mongod.run_mongod()
+
+    print('kill MongoDB')
+    mongod.kill_mongo()
+    print('successfully killed mongo')
 
 if __name__ == "__main__":
     main()
