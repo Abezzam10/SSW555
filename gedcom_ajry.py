@@ -4,44 +4,11 @@ import os
 import re
 import json
 import pymongo
-from subprocess import Popen, PIPE
 from pymongo import MongoClient
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
-
-
-class ShellxMongo:
-    """ A class that wrap the shell commands needed for establish the mongo deamon silently
-        and kill the process gracefully 
-    """
-
-    HOME = os.path.expanduser('~')
-    PORT = '27018'
-
-    @property
-    def dbpath(self):
-        """ create directory ~/data/db if not exists"""
-        dbpath = os.path.join(ShellxMongo.HOME, 'data', 'db')
-        if not os.path.isdir(dbpath):  # ~/data/db not exist
-            os.makedirs(dbpath)
-        return dbpath
-
-    def run_mongod(self):
-        """ set up the MongoDB instance, but silently
-            also get the backgroud pid of mongod 
-        """
-        process = Popen(f'mongod --fork --syslog --port {ShellxMongo.PORT} --dbpath {self.dbpath}', shell=True, stdout=PIPE)  # create the MongoDB deamon in the background
-        
-        # get the process id so that after the operation we can kill the MongoDB instance
-        process_msg = process.stdout.read().decode()
-        pid_pattern = r'forked process: ([\d]+)'
-        self.pid = re.search(pid_pattern, process_msg).group(1)
-
-    def kill_mongo(self):
-        """ kill the backgroud process of mongod"""
-        Popen(f'kill {self.pid}', shell=True)
-        
+      
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
         and look for errors and anomalies.
@@ -65,9 +32,7 @@ class Gedcom:
         self.fams = {}
         self.path_validate()
 
-        self.mongod = ShellxMongo()  # shell function wrapper
         self.client = None  # mongo client
-        self._cleanup()
         
         self.data_parser()  # processing data
         self.lst_to_obj()
@@ -195,93 +160,6 @@ class Gedcom:
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
 
-    def _build_mongo(self):
-        """ invoke this method everytime at the start of the userstory
-            create a mongodb and insert the data
-            store the mongo client as an instance attr
-            return a collection reference for use in user story method
-        """
-        indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
-        fam_mg = [f.mongo_data() for f in self.fams.values()]
-        
-        self.client = MongoClient('localhost', 27018)
-        db = self.client['gedcom']
-        
-        entts = db['entity']
-        entts.insert_many([*indi_mg, *fam_mg])
-
-        return entts
-
-    def _drop_mongo(self):
-        """ invoke this method every time at the end of the use story"""
-        db = self.client['gedcom']
-        db.drop_collection('entity')
-        self.client.close()
-        self.client = None
-
-    def _cleanup(self):
-        """ everytime running the program, clean it up"""
-        self.mongod.run_mongod()
-        self.client = MongoClient('localhost', 27018)
-        self._drop_mongo()
-        self.mongod.kill_mongo()
-
-    def us65536_example(self):
-        """ this is an example for using mongodb in our progamming
-            if you are using MongoDB in your implementation of the use stories, following lines of code are mandatory.
-            The process for using a mongodb is
-              1. Establish the MongoDB deamon, I wrap it up in ShellxMongo to make it run in the background silently.
-              2. Create a connection to MongoDB using MongoClient in pymongo, the wrapper function will return a reference
-                 of the collection and you can use it to do all the NoSQL operations.
-              3. implement your code.
-              4. After your code finishs, drop all the data(I'll specify the reason in stand up meeting)
-              5. Kill the background process using ShellxMongo's method
-        """
-        self.mongod.run_mongod()  # Step 1: create a MongoDB instance in the background
-        collection_of_all_entities = self._build_mongo()  # Step 2: create mongo client in python, insert all of the data
-
-        # Step 3: implement your code
-        # this 'collection_of_all_entities' is the reference to the collection
-        # query operations are wrapped up by pymongo
-        # here is an example for using this reference object
-        for doc in collection_of_all_entities.find({'cat': 'fam'}):
-            #fam_id, marr_dt = doc['_id'], doc['marr_dt'].strftime('%d %b %Y')
-            #print(f'Family entity ID: {fam_id}, spouses married at {marr_dt}')  # print the id and marriage date of every family entity
-            print(doc)
-
-        self._drop_mongo()  # Step 4: drop all of the data
-        self.mongod.kill_mongo()  # Step 5: kill the process of mongod run in the background
-
-    def us06_divorce_before_death(self):
-        """ Benji, Feb 18th, 2019\n
-            US06: Divorce before death\n
-            Divorce can only occur before death of both spouses
-        """
-        self.mongod.run_mongod()
-        ref = self._build_mongo()
-
-        for fam in ref.find({'cat': 'fam', 'div_dt': {'$ne': None}}):  # find all the divorced family
-            husb, wife = ref.find_one({'_id': fam['husb_id']}), ref.find_one({'_id': fam['wife_id']})
-            
-            if husb['deat_dt'] and husb['deat_dt'] < fam['div_dt']:
-                print(
-                    Error.err06(
-                        fam_id=fam['_id'], div_dt=fam['div_dt'].strftime('%d %b, %Y'),
-                        spouse_id=husb['_id'], spouse='husband', spouse_name=husb['name'], spouse_deat_dt=husb['deat_dt'].strftime('%d %b, %Y')
-                    )
-                )
-            
-            if wife['deat_dt'] and wife['deat_dt'] < fam['div_dt']:
-                print(
-                    Error.err06(
-                        fam_id=fam['_id'], div_dt=fam['div_dt'].strftime('%d %b, %Y'),
-                        spouse_id=wife['_id'], spouse='wife', spouse_name=wife['name'], spouse_deat_dt=wife['deat_dt'].strftime('%d %b, %Y')
-                    )
-                )
-
-        self._drop_mongo()
-        self.mongod.kill_mongo()
-
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -401,17 +279,8 @@ class Error:
 
 def main():
     """ Entrance"""
-    #gdm_neg = Gedcom('GEDCOM_files/us06_neg.ged')
-    #gdm_neg.pretty_print()
-    #gdm_neg.us06_divorce_before_death()
-    mongod = ShellxMongo()
-
-    print('estabilishing MongoDB deamon')
-    mongod.run_mongod()
-
-    print('kill MongoDB')
-    mongod.kill_mongo()
-    print('successfully killed mongo')
+    gdm = Gedcom('GEDCOM_files/us06_neg.ged')
+    gdm.pretty_print()
 
 if __name__ == "__main__":
     main()
