@@ -1,6 +1,5 @@
 import unittest
 from datetime import datetime
-import gedcom_ajry
 from gedcom_ajry import Gedcom
 
 class Sprint1Test(unittest.TestCase):
