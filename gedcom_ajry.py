@@ -164,7 +164,6 @@ class Gedcom:
     def user_story_birth_before_marriage(self):
         """US03 - Birth before marriage - Birth should occur before marriage of an individual """
 
-        print('---User Story---Birth Before Marriage') 
         for uid, indi in self.indis.items(): 
             temp = indi.birt_dt
             temp2 = indi.fam_s
