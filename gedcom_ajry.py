@@ -160,6 +160,38 @@ class Gedcom:
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
 
+    def us06_divorce_before_death(self, debug=False):
+        """ Benji, Feb 21st, 2019
+            US06: Death before divorce
+            Divorce can only occur before death of both spouses
+        """
+        err_msg_lst = []  # store each group of error message as a tuple
+        
+        for fam in self.fams.values():
+            if fam.div_dt:    
+                husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]
+
+                if husb.deat_dt and husb.deat_dt < fam.div_dt:
+                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), husb.indi_id, 'husband', husb.name, husb.deat_dt.strftime('%m/%d/%y')))
+
+                if wife.deat_dt and wife.deat_dt < fam.div_dt:
+                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), wife.indi_id, 'wife', wife.name, wife.deat_dt.strftime('%m/%d/%y')))
+
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                Error.err06(*err_msg)
+
+    def us20_aunts_and_uncle(self, debug=False):
+        """ Benji, Feb 22th, 2019
+            US20: Uncles and Aunts
+            Aunts and uncles should not marry their nieces or nephews
+        """
+
+    def _find_child(self, par_id):
+        """ return all of the children id of given parent id"""
+
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -185,6 +217,7 @@ class Entity:
     def pp_row(self):
         """ Return a row for command line pretty print"""
         raise NotImplementedError('Method hasn\'t been implemented yet.')
+
 
 class Individual(Entity):
     """ Represent the individual entity in the GEDCOM file"""
@@ -270,17 +303,30 @@ class Error:
     header = 'Error {}: '
 
     @classmethod
-    def err06(self, us_id='US06', fam_id='', div_dt='', spouse_id='', spouse='', spouse_name='', spouse_deat_dt='', VERBOSE=False):
+    def err06(cls, fam_id='', div_dt='', spouse_id='', spouse='', spouse_name='', spouse_deat_dt='', VERBOSE=False):
         """ return error message for User Stroy 06"""
+        us_id = 'US06'
         if VERBOSE:
-            return Error.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
-                f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}'
-        return Error.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.'
+            print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
+                f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}')
+        print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.')
+
+class Warning:
+    """ A class used to bundle up all of the warning message
+        the method naming pattern is warn[us_ID](*args, *kwargs)
+    """
+    header = 'Warning {}: '
+
+    @classmethod
+    def warn20(cls):
+        """ return warning message for User Story 20"""
+        us_id = 'US20'
 
 def main():
     """ Entrance"""
     gdm = Gedcom('GEDCOM_files/us06_neg.ged')
     gdm.pretty_print()
+    gdm.us06_divorce_before_death()
 
 if __name__ == "__main__":
     main()
