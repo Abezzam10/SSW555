@@ -3,12 +3,14 @@
 import os
 import re
 import json
-import pymongo
-from pymongo import MongoClient
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
-      
+import unittest
+import sys
+
+
+
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
         and look for errors and anomalies.
@@ -31,12 +33,12 @@ class Gedcom:
         self.indis = {}
         self.fams = {}
         self.path_validate()
-
-        self.client = None  # mongo client
         
-        self.data_parser()  # processing data
+        self.data_parser()
         self.lst_to_obj()
-        # self.pretty_print()
+        self.pretty_print()
+        self.user_story_birth_before_marriage()
+        self.user_story_bigamy()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -134,7 +136,6 @@ class Gedcom:
 
                 else:
                     curr_entity[attr] = arg
-        cat_cont[curr_cat][curr_id] = curr_entity
 
     def pretty_print(self):
         """ put everything in a fancy table
@@ -158,58 +159,35 @@ class Gedcom:
             id_, marr, div, husb_id, wife_id, chil_ids = fam.pp_row()
             husb_nm, wife_nm = self.indis[husb_id].name, self.indis[wife_id].name
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
-        print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
+        print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))  
 
-    def us06_divorce_before_death(self, debug=False):
-        """ Benji, Feb 21st, 2019
-            US06: Death before divorce
-            Divorce can only occur before death of both spouses
-        """
-        err_msg_lst = []  # store each group of error message as a tuple
+    def user_story_birth_before_marriage(self):
+        """US03 - Birth before marriage - Birth should occur before marriage of an individual """
+
+        print('---User Story---Birth Before Marriage') 
+        for uid, indi in self.indis.items(): 
+            temp = indi.birt_dt
+            temp2 = indi.fam_s
+            for fid, fam in self.fams.items(): 
+                if fam.fam_id == temp2: 
+                    if temp > fam.marr_dt: 
+                        print("Error! Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
+                    else: 
+                        print('Valid Marriage for Family: ', fam.fam_id)
         
-        for fam in self.fams.values():
-            if fam.div_dt:    
-                husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]
+    def user_story_bigamy(self): 
 
-                if husb.deat_dt and husb.deat_dt < fam.div_dt:
-                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), husb.indi_id, 'husband', husb.name, husb.deat_dt.strftime('%m/%d/%y')))
+        """ No bigamy - Married person should not be in another marriage"""
 
-                if wife.deat_dt and wife.deat_dt < fam.div_dt:
-                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), wife.indi_id, 'wife', wife.name, wife.deat_dt.strftime('%m/%d/%y')))
+        for indi, fam_s in self.indis.items():
+            temp = fam_s.fam_s
+            for fid, fam in self.fams.items(): 
+                if fam.fam_id == temp: 
+                    if sys.getsizeof(fam_s.fam_s) > 53 and fam.div_dt != None:
+                        print("Error! Cannot have multiple spouses!")
+                    else: 
+                        print("Good Civilian!")
 
-        if debug:
-            return err_msg_lst
-        else:
-            for err_msg in err_msg_lst:
-                Error.err06(*err_msg)
-
-    def us20_aunts_and_uncle(self, debug=False):
-        """ Benji, Feb 22th, 2019
-            US20: Uncles and Aunts
-            Aunts and uncles should not marry their nieces or nephews
-        """
-
-    def _find_child(self, par_id):
-        """ return all of the children id of given parent id"""
-
-    def date_validate(self):
-        """ validate the date from the local gedcom file 
-            Notes: will have another validation method for the mongo db
-        """
-        current_date = datetime.now()
-        # for individuals' date
-        for uid, indi in self.indis.items():
-            if indi.birt_dt is not None and indi.birt_dt > current_date:
-                print("birth time should not be after the current date")
-            if indi.deat_dt is not None and indi.deat_dt > current_date:
-                print("Death date should not be after than current date")
-
-        # for families' date
-        for uid, fam in self.fams.items():
-            if fam.marr_dt is not None and fam.marr_dt > current_date:
-                print("Marriage date should not be after the current date")
-            if fam.div_dt is not None and fam.div_dt > current_date:
-                print("Divorce date should not be after the current date")  
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -228,14 +206,9 @@ class Entity:
         else:
             raise AttributeError(f'Attribute {attr} not found')
 
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        raise NotImplementedError('Method hasn\'t been implemented yet.')
-
     def pp_row(self):
         """ Return a row for command line pretty print"""
         raise NotImplementedError('Method hasn\'t been implemented yet.')
-
 
 class Individual(Entity):
     """ Represent the individual entity in the GEDCOM file"""
@@ -260,20 +233,6 @@ class Individual(Entity):
         else:
             return 'No birth date.'
 
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        return {
-            '_id': self.indi_id,
-            'cat': 'indi',  # only used for mongodb to distinguish entity catagory
-            'name': self.name,
-            'sex': self.sex,
-            'birt_dt': self.birt_dt,
-            'deat_dt': self.deat_dt,
-            'age': self.age,
-            'fam_c': self.fam_c,
-            'fam_s': self.fam_s
-        }
-
     def pp_row(self):
         """ return a data sequence:
             [ID, Name, Gender, Birthday, Age, Alive, Death, Child, Spouse]
@@ -295,18 +254,6 @@ class Family(Entity):
         self.wife_id = ''
         self.chil_id = set()  # chil_id = set of indi_id
 
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        return {
-            '_id': self.fam_id,
-            'cat': 'fam',
-            'marr_dt': self.marr_dt,
-            'div_dt': self.div_dt,
-            'husb_id': self.husb_id,
-            'wife_id': self.wife_id,
-            'chil_id': list(self.chil_id)
-        }
-
     def pp_row(self):
         """ return a data sequence:
             [ID, Marr, Div, Husb_id, Wife_id, Chil_ids]
@@ -314,38 +261,26 @@ class Family(Entity):
         return self.fam_id, self.marr_dt.strftime('%Y-%m-%d'), self.div_dt.strftime('%Y-%m-%d') if self.div_dt else 'NA', \
             self.husb_id, self.wife_id, ', '.join(self.chil_id) if self.chil_id else 'NA'
 
-class Error:
-    """ A class used to bundle up all of the error message
-        the method naming pattern is err[us_ID](*args, *kwargs)
-    """
-    header = 'Error {}: '
+class UserStories(Family, Individual): 
+    """Implementation of user story"""
 
-    @classmethod
-    def err06(cls, fam_id='', div_dt='', spouse_id='', spouse='', spouse_name='', spouse_deat_dt='', VERBOSE=False):
-        """ return error message for User Stroy 06"""
-        us_id = 'US06'
-        if VERBOSE:
-            print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
-                f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}')
-        print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.')
+    def __init__(self): 
+        self.marr_dt = marr_dt
+        self.birt_dt = birt_dt
+    
+    def test(self): 
+        print("Y")
+        if self.birt_dt > self.marr_dt: 
+            print("Error! Birth Date is after marriage date")
+        else: 
+            print("Ok")
 
-class Warning:
-    """ A class used to bundle up all of the warning message
-        the method naming pattern is warn[us_ID](*args, *kwargs)
-    """
-    header = 'Warning {}: '
-
-    @classmethod
-    def warn20(cls):
-        """ return warning message for User Story 20"""
-        us_id = 'US20'
 
 def main():
     """ Entrance"""
-    gdm = Gedcom('GEDCOM_files/us06_neg.ged')
-    gdm.pretty_print()
-    gdm.us06_divorce_before_death()
+    gdm = Gedcom('/Users/rahil/Documents/Stevens/555/SSW555-master/test02.ged')
 
 if __name__ == "__main__":
     main()
+    # unittest.main(exit=False, verbosity=2)
         
