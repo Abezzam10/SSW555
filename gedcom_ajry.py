@@ -3,11 +3,10 @@
 import os
 import re
 import json
-import pymongo
-from pymongo import MongoClient
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
+from mongo_db import MongoDB
       
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
@@ -32,7 +31,7 @@ class Gedcom:
         self.fams = {}
         self.path_validate()
 
-        self.client = None  # mongo client
+        self.mongo_instance = MongoDB()
         
         self.data_parser()  # processing data
         self.lst_to_obj()
@@ -178,6 +177,60 @@ class Gedcom:
                 print("Marriage date should not be after the current date")
             if fam.div_dt is not None and fam.div_dt > current_date:
                 print("Divorce date should not be after the current date")  
+    
+    def date_validate_via_db(self):
+        """ search the data from the mongodb to see if there are some invalid dates """
+        current_time = datetime.now()
+        current_time = datetime.strptime("2000-01-01", "%Y-%m-%d") # for test
+        cond = {
+            "$or": [
+                {"birt_dt": {"$gt": current_time}},
+                {"deat_dt": {"$gt": current_time}},
+                {"marr_dt": {"$gt": current_time}},
+                {"div_dt": {"$gt": current_time}},
+            ]
+        }
+
+        error_mes = ""
+        result_of_docs = MongoDB().get_collection('entity').find(cond)
+
+        for doc in result_of_docs:
+            tmp_str = ""
+
+            if doc['cat'] == 'fam':
+                # for family
+                if doc['marr_dt'] is not None and doc['marr_dt'] > current_time:
+                    tmp_str += f"marriage date [{doc['marr_dt']}], "
+                if doc['div_dt'] is not None and doc['div_dt'] > current_time:
+                    tmp_str += f"divorice date [{doc['div_dt']}]"
+                error_mes += f"Family entity ID: {doc['_id']}, have incorrect {tmp_str}\n"
+
+            if doc['cat'] == 'indi':
+                # for individual
+                if doc['birt_dt'] is not None and doc['birt_dt'] > current_time:
+                    tmp_str += f"birth date [{doc['birt_dt']}], "
+                if doc['deat_dt'] is not None and doc['deat_dt'] > current_time:
+                    tmp_str += f"deadth date [{doc['deat_dt']}]"
+                error_mes += f"Individual entity ID: {doc['_id']}, have incorrect {tmp_str}\n"
+        
+        print(f"Tested current_date: {current_time}")
+        print(error_mes)
+
+    def insert_to_mongo(self):
+        """ invoke this method everytime at the start of the userstory
+            create a mongodb and insert the data
+            store the mongo client as an instance attr
+            return a collection reference for use in user story method
+        """
+        indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
+        fam_mg = [f.mongo_data() for f in self.fams.values()]
+        
+        mongo_instance = MongoDB()
+        
+        entts = mongo_instance.get_collection("entity")
+        entts.insert_many([*indi_mg, *fam_mg])
+        
+        return entts
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -297,9 +350,27 @@ class Error:
 
 def main():
     """ Entrance"""
-    gdm = Gedcom('./GEDCOM_files/proj02_test_by_javer.ged')
-    gdm.date_validate()
-    # gdm.pretty_print()
+    gdm = Gedcom('./GEDCOM_files/proj01.ged')
+    
+    """
+        Mongodb Example Usage:
+        1. use the MongoDB() class as instance
+        2. mongodb_instance contains some basic method, return the collection
+        3. if we need to do some operation, e.g. insert, update, delete or search
+           just use the returned collection to do so
+        4. if doing the search operation, extract the documents 
+    """
+    mongo_instance = MongoDB()
+    mongo_instance.delete_database()
+    gdm.insert_to_mongo()
+    collection_of_entities = mongo_instance.get_collection("entity")
+    result_of_docs = collection_of_entities.find({'cat': 'fam'})
+    
+    for doc in result_of_docs:
+        print(doc)
+
+    print("---------------")
+    gdm.date_validate_via_db()
 
 if __name__ == "__main__":
     main()
