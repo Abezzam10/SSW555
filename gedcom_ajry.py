@@ -36,7 +36,7 @@ class Gedcom:
         
         self.data_parser()  # processing data
         self.lst_to_obj()
-        #self.pretty_print()
+        # self.pretty_print()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -192,6 +192,24 @@ class Gedcom:
     def _find_child(self, par_id):
         """ return all of the children id of given parent id"""
 
+    def date_validate(self):
+        """ validate the date from the local gedcom file 
+            Notes: will have another validation method for the mongo db
+        """
+        current_date = datetime.now()
+        # for individuals' date
+        for uid, indi in self.indis.items():
+            if indi.birt_dt is not None and indi.birt_dt > current_date:
+                print("birth time should not be after the current date")
+            if indi.deat_dt is not None and indi.deat_dt > current_date:
+                print("Death date should not be after than current date")
+
+        # for families' date
+        for uid, fam in self.fams.items():
+            if fam.marr_dt is not None and fam.marr_dt > current_date:
+                print("Marriage date should not be after the current date")
+            if fam.div_dt is not None and fam.div_dt > current_date:
+                print("Divorce date should not be after the current date")  
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
