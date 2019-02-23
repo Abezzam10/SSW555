@@ -3,12 +3,14 @@
 import os
 import re
 import json
-import pymongo
-from pymongo import MongoClient
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
-      
+import unittest
+import sys
+
+
+
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
         and look for errors and anomalies.
@@ -31,12 +33,10 @@ class Gedcom:
         self.indis = {}
         self.fams = {}
         self.path_validate()
-
-        self.client = None  # mongo client
         
-        self.data_parser()  # processing data
+        self.data_parser()
         self.lst_to_obj()
-        # self.pretty_print()
+        self.pretty_print()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -135,7 +135,6 @@ class Gedcom:
 
                 else:
                     curr_entity[attr] = arg
-        cat_cont[curr_cat][curr_id] = curr_entity
 
     def pretty_print(self):
         """ put everything in a fancy table
@@ -160,7 +159,7 @@ class Gedcom:
             husb_nm = ', '.join([self.indis[husb_id].name['last'], self.indis[husb_id].name['first']])
             wife_nm = ', '.join([self.indis[wife_id].name['last'], self.indis[wife_id].name['first']])
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
-        print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
+        print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))  
 
     def us06_divorce_before_death(self, debug=False):
         """ Benji, Feb 21st, 2019
@@ -227,24 +226,36 @@ class Gedcom:
 
         return [self.indis[i] for i in siblings]
 
-    def date_validate(self):
-        """ validate the date from the local gedcom file 
-            Notes: will have another validation method for the mongo db
+    def us03_birth_before_marriage(self):
+        """ Ray, Feb 22th, 2019
+            US03: Birth before marriage
+            Birth should occur before marriage of an individual
         """
-        current_date = datetime.now()
-        # for individuals' date
-        for uid, indi in self.indis.items():
-            if indi.birt_dt is not None and indi.birt_dt > current_date:
-                print("birth time should not be after the current date")
-            if indi.deat_dt is not None and indi.deat_dt > current_date:
-                print("Death date should not be after than current date")
 
-        # for families' date
-        for uid, fam in self.fams.items():
-            if fam.marr_dt is not None and fam.marr_dt > current_date:
-                print("Marriage date should not be after the current date")
-            if fam.div_dt is not None and fam.div_dt > current_date:
-                print("Divorce date should not be after the current date")  
+        for uid, indi in self.indis.items(): 
+            temp = indi.birt_dt
+            temp2 = indi.fam_s
+            for fid, fam in self.fams.items(): 
+                if fam.fam_id == temp2: 
+                    if temp > fam.marr_dt: 
+                        print("Error! Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
+                    else: 
+                        print('Valid Marriage for Family: ', fam.fam_id)
+        
+    def us11_no_bigamy(self): 
+        """ Ray, Feb 22th, 2019
+            US11: No bigamy
+            Married person should not be in another marriage
+        """
+        for indi, fam_s in self.indis.items():
+            temp = fam_s.fam_s
+            for fid, fam in self.fams.items(): 
+                if fam.fam_id == temp: 
+                    if sys.getsizeof(fam_s.fam_s) > 53 and fam.div_dt != None:
+                        print("Error! Cannot have multiple spouses!")
+                    else: 
+                        print("Good Civilian!")
+
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -263,14 +274,9 @@ class Entity:
         else:
             raise AttributeError(f'Attribute {attr} not found')
 
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        raise NotImplementedError('Method hasn\'t been implemented yet.')
-
     def pp_row(self):
         """ Return a row for command line pretty print"""
         raise NotImplementedError('Method hasn\'t been implemented yet.')
-
 
 class Individual(Entity):
     """ Represent the individual entity in the GEDCOM file"""
@@ -295,20 +301,6 @@ class Individual(Entity):
         else:
             return 'No birth date.'
 
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        return {
-            '_id': self.indi_id,
-            'cat': 'indi',  # only used for mongodb to distinguish entity catagory
-            'name': self.name,
-            'sex': self.sex,
-            'birt_dt': self.birt_dt,
-            'deat_dt': self.deat_dt,
-            'age': self.age,
-            'fam_c': self.fam_c,
-            'fam_s': self.fam_s
-        }
-
     def pp_row(self):
         """ return a data sequence:
             [ID, Name, Gender, Birthday, Age, Alive, Death, Child, Spouse]
@@ -329,18 +321,6 @@ class Family(Entity):
         self.husb_id = ''
         self.wife_id = ''
         self.chil_id = set()  # chil_id = set of indi_id
-
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        return {
-            '_id': self.fam_id,
-            'cat': 'fam',
-            'marr_dt': self.marr_dt,
-            'div_dt': self.div_dt,
-            'husb_id': self.husb_id,
-            'wife_id': self.wife_id,
-            'chil_id': list(self.chil_id)
-        }
 
     def pp_row(self):
         """ return a data sequence:
@@ -383,7 +363,6 @@ class Warn:
             f'The child of {indi_nm}({indi_id}), {child_nm}({child_id}), is married with the sibling of {indi_nm}({indi_id}), {sibling_nm}({sibling_id})'
             )
 
-
 def main():
     """ Entrance"""
     gdm = Gedcom('GEDCOM_files/us20_nephew_marr_aunt.ged')
@@ -393,4 +372,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # unittest.main(exit=False, verbosity=2)
         
