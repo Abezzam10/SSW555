@@ -127,9 +127,10 @@ class Gedcom:
 
                 elif tag == 'NAME':  # use regex to extract the first name and last name, SHOW OFF PURPOSE ONLY :P
                     regex_obj = re.search(Gedcom.names_regex, arg)
-                    curr_entity[attr] = f'{regex_obj.group(2)}, {regex_obj.group(1)}'  # name_fmt = r'last_name, first_name'
+                    curr_entity[attr]['first'] = regex_obj.group(1)
+                    curr_entity[attr]['last'] = regex_obj.group(2)
 
-                elif tag == 'CHIL':  # beware that the the value of CHIL is a set
+                elif tag in ('CHIL', 'FAMS'):  # beware that the the value of CHIL is a set
                     curr_entity[attr].add(arg)
 
                 else:
@@ -156,7 +157,8 @@ class Gedcom:
         fams_rows = list()
         for uid, fam in self.fams.items():
             id_, marr, div, husb_id, wife_id, chil_ids = fam.pp_row()
-            husb_nm, wife_nm = self.indis[husb_id].name, self.indis[wife_id].name
+            husb_nm = ', '.join([self.indis[husb_id].name['last'], self.indis[husb_id].name['first']])
+            wife_nm = ', '.join([self.indis[wife_id].name['last'], self.indis[wife_id].name['first']])
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
 
@@ -187,10 +189,39 @@ class Gedcom:
         """ Benji, Feb 22th, 2019
             US20: Uncles and Aunts
             Aunts and uncles should not marry their nieces or nephews
+            Definition of Aunt&Uncle: Sibling of an individual's parent
         """
+        err_msg_lst = []
 
-    def _find_child(self, par_id):
-        """ return all of the children id of given parent id"""
+        for indi in self.indis.values():
+            children = self._find_children(indi)
+            siblings = self._find_siblings(indi)
+
+            for sibling in siblings:
+                for child in children:
+                    if sibling.fam_s & child.fam_s:  # as fam_s is a set, python has this intersection shortcut, DOPE
+                        err_msg_lst.append((indi.indi_id, indi.name, child.indi_id, child.name, sibling.indi_id, sibling.name))
+
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                Warn.warn20(*err_msg)
+                    
+
+    def _find_children(self, indi):
+        """ return all of the children objects of given indi_id"""
+        children = []
+
+        for fam_id in indi.fam_s:
+            children.extend(self.fams[fam_id].chil_id)  # extend all children's id(string) of this individual
+
+        return [self.indis[i] for i in children]  # list of individual objects
+
+    def _find_siblings(self, indi):
+        """ return all of the siblings objects of given indi_id"""
+        siblings = []
+        return [self.indis[i] for i in siblings.extend(self.fams[indi.fam_c].chil_id)]  # sorry it's just the pythonista inside me wanna show off a lil bit ;-)
 
     def date_validate(self):
         """ validate the date from the local gedcom file 
@@ -244,12 +275,12 @@ class Individual(Entity):
 
     def __init__(self, indi_id):
         self.indi_id = indi_id
-        self.name = ''
+        self.name = {'first': '', 'last': ''}
         self.sex = ''
         self.birt_dt = None
         self.deat_dt = None
         self.fam_c = ''
-        self.fam_s = ''
+        self.fam_s = set()
 
     @property
     def age(self):
@@ -278,9 +309,9 @@ class Individual(Entity):
         """ return a data sequence:
             [ID, Name, Gender, Birthday, Age, Alive, Death, Child, Spouse]
         """
-        return self.indi_id, self.name, self.sex, \
+        return self.indi_id, ', '.join([self.name['last'], self.name['first']]), self.sex, \
                 self.birt_dt.strftime('%Y-%m-%d'), self.age, True if not self.deat_dt else False, self.deat_dt.strftime('%Y-%m-%d') if self.deat_dt else 'NA', \
-                self.fam_c if self.fam_c else 'NA', self.fam_s if self.fam_s else 'NA' 
+                self.fam_c if self.fam_c else 'NA', ', '.join(self.fam_s) if self.fam_s else 'NA' 
 
 class Family(Entity):
     """ Represent the family entity in the GEDCOM file"""
@@ -329,20 +360,28 @@ class Error:
                 f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}')
         print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.')
 
-class Warning:
+class Warn:
     """ A class used to bundle up all of the warning message
         the method naming pattern is warn[us_ID](*args, *kwargs)
     """
     header = 'Warning {}: '
 
     @classmethod
-    def warn20(cls):
+    def warn20(cls, indi_id, indi_name, child_id, child_name, sibling_id, sibling_name):
         """ return warning message for User Story 20"""
         us_id = 'US20'
+        print(cls.header.format(us_id) + \
+            f'The child of {0}({indi_id}), {1}({child_id}), is married with the sibling of {0}({indi_id}), {2}({sibling_id})'.format(
+                ' '.join([indi_name['first'], indi_name['last']]),
+                ' '.join([child_name['first'], child_name['last']]),
+                ' '.join([sibling_name['first'], sibling_name['last']])
+                )
+            )
+
 
 def main():
     """ Entrance"""
-    gdm = Gedcom('GEDCOM_files/us06_neg.ged')
+    gdm = Gedcom('GEDCOM_files/proj01.ged')
     gdm.pretty_print()
     gdm.us06_divorce_before_death()
 
