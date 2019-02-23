@@ -177,8 +177,7 @@ class Gedcom:
                 print("Error, death before marriage of husband with id : ", fam.husb_id)
             if(wife_dt !=None and fam.marr_dt>wife_dt):
                 print("Error, death before her marriage of wife with id : ", fam.wife_id)
-          
-                     
+                              
     def us03_birth_before_death(self):
         """ John February 18th, 2018
             US03: Birth before Death
@@ -190,7 +189,6 @@ class Gedcom:
                 continue
             elif(people.birt_dt>people.deat_dt):
                 print("Error, death date after birth date for individual with id : ", people.indi_id)
-
 
     def us06_divorce_before_death(self, debug=False):
         """ Benji, Feb 21st, 2019
