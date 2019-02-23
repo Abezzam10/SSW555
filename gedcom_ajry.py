@@ -207,7 +207,6 @@ class Gedcom:
         else:
             for err_msg in err_msg_lst:
                 Warn.warn20(*err_msg)
-                    
 
     def _find_children(self, indi):
         """ return all of the children objects of given indi_id"""
@@ -221,7 +220,12 @@ class Gedcom:
     def _find_siblings(self, indi):
         """ return all of the siblings objects of given indi_id"""
         siblings = []
-        return [self.indis[i] for i in siblings.extend(self.fams[indi.fam_c].chil_id)]  # sorry it's just the pythonista inside me wanna show off a lil bit ;-)
+        if not indi.fam_c:
+            return []
+        else:
+            siblings.extend(self.fams[indi.fam_c].chil_id)
+
+        return [self.indis[i] for i in siblings]
 
     def date_validate(self):
         """ validate the date from the local gedcom file 
@@ -370,20 +374,22 @@ class Warn:
     def warn20(cls, indi_id, indi_name, child_id, child_name, sibling_id, sibling_name):
         """ return warning message for User Story 20"""
         us_id = 'US20'
-        print(cls.header.format(us_id) + \
-            f'The child of {0}({indi_id}), {1}({child_id}), is married with the sibling of {0}({indi_id}), {2}({sibling_id})'.format(
-                ' '.join([indi_name['first'], indi_name['last']]),
-                ' '.join([child_name['first'], child_name['last']]),
-                ' '.join([sibling_name['first'], sibling_name['last']])
-                )
+        indi_nm = ' '.join([indi_name['first'], indi_name['last']])  
+        child_nm = ' '.join([child_name['first'], child_name['last']])  
+        sibling_nm = ' '.join([sibling_name['first'], sibling_name['last']])
+
+        print(
+            cls.header.format(us_id) + \
+            f'The child of {indi_nm}({indi_id}), {child_nm}({child_id}), is married with the sibling of {indi_nm}({indi_id}), {sibling_nm}({sibling_id})'
             )
 
 
 def main():
     """ Entrance"""
-    gdm = Gedcom('GEDCOM_files/proj01.ged')
+    gdm = Gedcom('GEDCOM_files/us20_nephew_marr_aunt.ged')
     gdm.pretty_print()
-    gdm.us06_divorce_before_death()
+    # gdm.us06_divorce_before_death()
+    gdm.us20_aunts_and_uncle()
 
 if __name__ == "__main__":
     main()
