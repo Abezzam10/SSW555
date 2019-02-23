@@ -26,9 +26,7 @@ docs/_build/
 htmlcov/
 *.sql
 *.json
-*.ged
 *jrr*.*
-GEDCOM_files/
 # Automated ignore Python parts below
 
 # Byte-compiled / optimized / DLL files
