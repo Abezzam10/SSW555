@@ -39,7 +39,7 @@ class Gedcom:
 
         self.data_parser()
         self.lst_to_obj()
-        self.pretty_print()
+        #self.pretty_print()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -138,6 +138,7 @@ class Gedcom:
 
                 else:
                     curr_entity[attr] = arg
+        cat_cont[curr_cat][curr_id] = curr_entity
 
     def pretty_print(self):
         """ put everything in a fancy table
@@ -467,10 +468,10 @@ def main():
     # gdm.us22_unique_ids()
 
     # Benji
-    gdm = Gedcom('GEDCOM_files/us20_nephew_marr_aunt.ged')
+    # gdm = Gedcom('GEDCOM_files/us20_nephew_marr_aunt.ged')
     # gdm.pretty_print()
     # gdm.us06_divorce_before_death()
-    gdm.us20_aunts_and_uncle()
+    # gdm.us20_aunts_and_uncle()
 
     # Ray
     # gdm.us03_birth_before_marriage()
