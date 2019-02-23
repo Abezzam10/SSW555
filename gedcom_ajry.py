@@ -179,7 +179,10 @@ class Gedcom:
                 print("Divorce date should not be after the current date")  
     
     def date_validate_via_db(self):
-        """ search the data from the mongodb to see if there are some invalid dates """
+        """ Javer, Feb 19, 2019
+            Date Validate
+            Dates (birth, marriage, divorce, death) should not be after the current date
+        """
         current_time = datetime.now()
         current_time = datetime.strptime("2000-01-01", "%Y-%m-%d") # for test
         cond = {
@@ -196,7 +199,6 @@ class Gedcom:
 
         for doc in result_of_docs:
             tmp_str = ""
-
             if doc['cat'] == 'fam':
                 # for family
                 if doc['marr_dt'] is not None and doc['marr_dt'] > current_time:
@@ -231,6 +233,37 @@ class Gedcom:
         entts.insert_many([*indi_mg, *fam_mg])
         
         return entts
+
+    def us22_unique_ids(self):
+        """ Javer, Feb 23, 2019
+            Unique Ids
+            To make sure all individual IDs should be unique and all family IDs should be unique 
+        """
+        mongo_instance = MongoDB()
+        collection = mongo_instance.get_collection('entity')
+
+        indi_cond = {'cat': 'indi'}
+        result_of_indi_docs = collection.find(indi_cond)
+        dict_of_indi = {}
+        for doc in result_of_indi_docs:
+            # if doc['_id'] == "@I1@": # test for id conflict
+                # doc['_id'] = "@I2@"
+            if doc['_id'] in dict_of_indi.keys():
+                print(f"Conflict of individual id: {doc['_id']}")
+            else:
+                dict_of_indi[doc['_id']] = doc
+
+        fam_cond = {'cat': 'fam'}
+        result_of_fam_docs = collection.find(fam_cond)
+        dict_of_fam = {}
+        for doc in result_of_fam_docs:
+            # if doc['_id'] == "@F1@": # test for id conflict
+            #     doc['_id'] = "@F2@"
+            if doc['_id'] in dict_of_fam.keys():
+                print(f"Conflict of individual id: {doc['_id']}")
+            else:
+                dict_of_fam[doc['_id']] = doc
+
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -361,16 +394,17 @@ def main():
         4. if doing the search operation, extract the documents 
     """
     mongo_instance = MongoDB()
-    mongo_instance.delete_database()
-    gdm.insert_to_mongo()
-    collection_of_entities = mongo_instance.get_collection("entity")
-    result_of_docs = collection_of_entities.find({'cat': 'fam'})
+    # mongo_instance.delete_database()
+    # gdm.insert_to_mongo()
+    # collection_of_entities = mongo_instance.get_collection("entity")
+    # result_of_docs = collection_of_entities.find({'cat': 'fam'})
     
-    for doc in result_of_docs:
-        print(doc)
+    # for doc in result_of_docs:
+    #     print(doc)
 
-    print("---------------")
-    gdm.date_validate_via_db()
+    # print("---------------")
+    # gdm.date_validate_via_db()
+    gdm.us22_unique_ids()
 
 if __name__ == "__main__":
     main()
