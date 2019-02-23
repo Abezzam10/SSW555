@@ -3,11 +3,15 @@
 import os
 import re
 import json
+import unittest
+import sys
+
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
 from mongo_db import MongoDB
       
+
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
         and look for errors and anomalies.
@@ -32,10 +36,10 @@ class Gedcom:
         self.path_validate()
 
         self.mongo_instance = MongoDB()
-        
-        self.data_parser()  # processing data
+
+        self.data_parser()
         self.lst_to_obj()
-        # self.pretty_print()
+        self.pretty_print()
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -126,14 +130,14 @@ class Gedcom:
 
                 elif tag == 'NAME':  # use regex to extract the first name and last name, SHOW OFF PURPOSE ONLY :P
                     regex_obj = re.search(Gedcom.names_regex, arg)
-                    curr_entity[attr] = f'{regex_obj.group(2)}, {regex_obj.group(1)}'  # name_fmt = r'last_name, first_name'
+                    curr_entity[attr]['first'] = regex_obj.group(1)
+                    curr_entity[attr]['last'] = regex_obj.group(2)
 
-                elif tag == 'CHIL':  # beware that the the value of CHIL is a set
+                elif tag in ('CHIL', 'FAMS'):  # beware that the the value of CHIL is a set
                     curr_entity[attr].add(arg)
 
                 else:
                     curr_entity[attr] = arg
-        cat_cont[curr_cat][curr_id] = curr_entity
 
     def pretty_print(self):
         """ put everything in a fancy table
@@ -155,30 +159,107 @@ class Gedcom:
         fams_rows = list()
         for uid, fam in self.fams.items():
             id_, marr, div, husb_id, wife_id, chil_ids = fam.pp_row()
-            husb_nm, wife_nm = self.indis[husb_id].name, self.indis[wife_id].name
+            husb_nm = ', '.join([self.indis[husb_id].name['last'], self.indis[husb_id].name['first']])
+            wife_nm = ', '.join([self.indis[wife_id].name['last'], self.indis[wife_id].name['first']])
             fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
-        print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))              
+        print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))  
 
-    def date_validate(self):
-        """ validate the date from the local gedcom file 
-            Notes: will have another validation method for the mongo db
+    def us06_divorce_before_death(self, debug=False):
+        """ Benji, Feb 21st, 2019
+            US06: Death before divorce
+            Divorce can only occur before death of both spouses
         """
-        current_date = datetime.now()
-        # for individuals' date
-        for uid, indi in self.indis.items():
-            if indi.birt_dt is not None and indi.birt_dt > current_date:
-                print("birth time should not be after the current date")
-            if indi.deat_dt is not None and indi.deat_dt > current_date:
-                print("Death date should not be after than current date")
+        err_msg_lst = []  # store each group of error message as a tuple
+        
+        for fam in self.fams.values():
+            if fam.div_dt:    
+                husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]
 
-        # for families' date
-        for uid, fam in self.fams.items():
-            if fam.marr_dt is not None and fam.marr_dt > current_date:
-                print("Marriage date should not be after the current date")
-            if fam.div_dt is not None and fam.div_dt > current_date:
-                print("Divorce date should not be after the current date")  
-    
-    def date_validate_via_db(self):
+                if husb.deat_dt and husb.deat_dt < fam.div_dt:
+                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), husb.indi_id, 'husband', husb.name, husb.deat_dt.strftime('%m/%d/%y')))
+
+                if wife.deat_dt and wife.deat_dt < fam.div_dt:
+                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), wife.indi_id, 'wife', wife.name, wife.deat_dt.strftime('%m/%d/%y')))
+
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                Error.err06(*err_msg)
+
+    def us20_aunts_and_uncle(self, debug=False):
+        """ Benji, Feb 22th, 2019
+            US20: Uncles and Aunts
+            Aunts and uncles should not marry their nieces or nephews
+            Definition of Aunt&Uncle: Sibling of an individual's parent
+        """
+        err_msg_lst = []
+
+        for indi in self.indis.values():
+            children = self._find_children(indi)
+            siblings = self._find_siblings(indi)
+
+            for sibling in siblings:
+                for child in children:
+                    if sibling.fam_s & child.fam_s:  # as fam_s is a set, python has this intersection shortcut, DOPE
+                        err_msg_lst.append((indi.indi_id, indi.name, child.indi_id, child.name, sibling.indi_id, sibling.name))
+
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                Warn.warn20(*err_msg)
+
+    def _find_children(self, indi):
+        """ return all of the children objects of given indi_id"""
+        children = []
+
+        for fam_id in indi.fam_s:
+            children.extend(self.fams[fam_id].chil_id)  # extend all children's id(string) of this individual
+
+        return [self.indis[i] for i in children]  # list of individual objects
+
+    def _find_siblings(self, indi):
+        """ return all of the siblings objects of given indi_id"""
+        siblings = []
+        if not indi.fam_c:
+            return []
+        else:
+            siblings.extend(self.fams[indi.fam_c].chil_id)
+
+        return [self.indis[i] for i in siblings]
+
+    def us03_birth_before_marriage(self):
+        """ Ray, Feb 22th, 2019
+            US03: Birth before marriage
+            Birth should occur before marriage of an individual
+        """
+
+        for uid, indi in self.indis.items(): 
+            temp = indi.birt_dt
+            temp2 = indi.fam_s
+            for fid, fam in self.fams.items(): 
+                if fam.fam_id == temp2: 
+                    if temp > fam.marr_dt: 
+                        print("Error! Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
+                    else: 
+                        print('Valid Marriage for Family: ', fam.fam_id)
+        
+    def us11_no_bigamy(self): 
+        """ Ray, Feb 22th, 2019
+            US11: No bigamy
+            Married person should not be in another marriage
+        """
+        for indi, fam_s in self.indis.items():
+            temp = fam_s.fam_s
+            for fid, fam in self.fams.items(): 
+                if fam.fam_id == temp: 
+                    if sys.getsizeof(fam_s.fam_s) > 53 and fam.div_dt != None:
+                        print("Error! Cannot have multiple spouses!")
+                    else: 
+                        print("Good Civilian!")
+
+    def us01_date_validate(self):
         """ Javer, Feb 19, 2019
             Date Validate
             Dates (birth, marriage, divorce, death) should not be after the current date
@@ -239,9 +320,9 @@ class Gedcom:
             Unique Ids
             To make sure all individual IDs should be unique and all family IDs should be unique 
         """
-        mongo_instance = MongoDB()
-        collection = mongo_instance.get_collection('entity')
+        collection = MongoDB().get_collection('entity')
 
+        # for indi
         indi_cond = {'cat': 'indi'}
         result_of_indi_docs = collection.find(indi_cond)
         dict_of_indi = {}
@@ -253,6 +334,7 @@ class Gedcom:
             else:
                 dict_of_indi[doc['_id']] = doc
 
+        # for fam
         fam_cond = {'cat': 'fam'}
         result_of_fam_docs = collection.find(fam_cond)
         dict_of_fam = {}
@@ -282,10 +364,6 @@ class Entity:
         else:
             raise AttributeError(f'Attribute {attr} not found')
 
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        raise NotImplementedError('Method hasn\'t been implemented yet.')
-
     def pp_row(self):
         """ Return a row for command line pretty print"""
         raise NotImplementedError('Method hasn\'t been implemented yet.')
@@ -297,12 +375,12 @@ class Individual(Entity):
 
     def __init__(self, indi_id):
         self.indi_id = indi_id
-        self.name = ''
+        self.name = {'first': '', 'last': ''}
         self.sex = ''
         self.birt_dt = None
         self.deat_dt = None
         self.fam_c = ''
-        self.fam_s = ''
+        self.fam_s = set()
 
     @property
     def age(self):
@@ -313,27 +391,13 @@ class Individual(Entity):
         else:
             return 'No birth date.'
 
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        return {
-            '_id': self.indi_id,
-            'cat': 'indi',  # only used for mongodb to distinguish entity catagory
-            'name': self.name,
-            'sex': self.sex,
-            'birt_dt': self.birt_dt,
-            'deat_dt': self.deat_dt,
-            'age': self.age,
-            'fam_c': self.fam_c,
-            'fam_s': self.fam_s
-        }
-
     def pp_row(self):
         """ return a data sequence:
             [ID, Name, Gender, Birthday, Age, Alive, Death, Child, Spouse]
         """
-        return self.indi_id, self.name, self.sex, \
+        return self.indi_id, ', '.join([self.name['last'], self.name['first']]), self.sex, \
                 self.birt_dt.strftime('%Y-%m-%d'), self.age, True if not self.deat_dt else False, self.deat_dt.strftime('%Y-%m-%d') if self.deat_dt else 'NA', \
-                self.fam_c if self.fam_c else 'NA', self.fam_s if self.fam_s else 'NA' 
+                self.fam_c if self.fam_c else 'NA', ', '.join(self.fam_s) if self.fam_s else 'NA' 
 
 class Family(Entity):
     """ Represent the family entity in the GEDCOM file"""
@@ -347,18 +411,6 @@ class Family(Entity):
         self.husb_id = ''
         self.wife_id = ''
         self.chil_id = set()  # chil_id = set of indi_id
-
-    def mongo_data(self):
-        """ return a dictionary with mongodb data for database"""
-        return {
-            '_id': self.fam_id,
-            'cat': 'fam',
-            'marr_dt': self.marr_dt,
-            'div_dt': self.div_dt,
-            'husb_id': self.husb_id,
-            'wife_id': self.wife_id,
-            'chil_id': list(self.chil_id)
-        }
 
     def pp_row(self):
         """ return a data sequence:
@@ -374,38 +426,57 @@ class Error:
     header = 'Error {}: '
 
     @classmethod
-    def err06(self, us_id='US06', fam_id='', div_dt='', spouse_id='', spouse='', spouse_name='', spouse_deat_dt='', VERBOSE=False):
+    def err06(cls, fam_id='', div_dt='', spouse_id='', spouse='', spouse_name='', spouse_deat_dt='', VERBOSE=False):
         """ return error message for User Stroy 06"""
+        us_id = 'US06'
         if VERBOSE:
-            return Error.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
-                f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}'
-        return Error.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.'
+            print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
+                f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}')
+        print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.')
+
+class Warn:
+    """ A class used to bundle up all of the warning message
+        the method naming pattern is warn[us_ID](*args, *kwargs)
+    """
+    header = 'Warning {}: '
+
+    @classmethod
+    def warn20(cls, indi_id, indi_name, child_id, child_name, sibling_id, sibling_name):
+        """ return warning message for User Story 20"""
+        us_id = 'US20'
+        indi_nm = ' '.join([indi_name['first'], indi_name['last']])  
+        child_nm = ' '.join([child_name['first'], child_name['last']])  
+        sibling_nm = ' '.join([sibling_name['first'], sibling_name['last']])
+
+        print(
+            cls.header.format(us_id) + \
+            f'The child of {indi_nm}({indi_id}), {child_nm}({child_id}), is married with the sibling of {indi_nm}({indi_id}), {sibling_nm}({sibling_id})'
+            )
 
 def main():
     """ Entrance"""
-    gdm = Gedcom('./GEDCOM_files/proj01.ged')
+
+    # gdm = Gedcom('./GEDCOM_files/proj01.ged')
     
-    """
-        Mongodb Example Usage:
-        1. use the MongoDB() class as instance
-        2. mongodb_instance contains some basic method, return the collection
-        3. if we need to do some operation, e.g. insert, update, delete or search
-           just use the returned collection to do so
-        4. if doing the search operation, extract the documents 
-    """
-    mongo_instance = MongoDB()
+    # mongo_instance = MongoDB()
     # mongo_instance.delete_database()
     # gdm.insert_to_mongo()
-    # collection_of_entities = mongo_instance.get_collection("entity")
-    # result_of_docs = collection_of_entities.find({'cat': 'fam'})
     
-    # for doc in result_of_docs:
-    #     print(doc)
+    # Javer
+    # gdm.us01_date_validate()
+    # gdm.us22_unique_ids()
 
-    # print("---------------")
-    # gdm.date_validate_via_db()
-    gdm.us22_unique_ids()
+    # Benji
+    gdm = Gedcom('GEDCOM_files/us20_nephew_marr_aunt.ged')
+    # gdm.pretty_print()
+    # gdm.us06_divorce_before_death()
+    gdm.us20_aunts_and_uncle()
+
+    # Ray
+    # gdm.us03_birth_before_marriage()
+    # gdm.us11_no_bigamy()
 
 if __name__ == "__main__":
     main()
+    # unittest.main(exit=False, verbosity=2)
         
