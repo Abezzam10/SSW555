@@ -315,6 +315,7 @@ class Gedcom:
             This method checks if the marriage date is before the husband's or wifes's death date or not.
             Method prints an error if anomalies are found.
         """
+        error_message_list=[]
         for fam in self.fams.values():
             for indi in self.indis.values():
                 if (fam.husb_id==indi.indi_id):
@@ -323,8 +324,11 @@ class Gedcom:
                     wife_dt = indi.deat_dt
             if(husb_dt !=None and fam.marr_dt>husb_dt):
                 print("Error, death before marriage of husband with id : ", fam.husb_id)
+                error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
             if(wife_dt !=None and fam.marr_dt>wife_dt):
                 print("Error, death before her marriage of wife with id : ", fam.wife_id)
+                error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
+        return error_message_list
                               
     def us03_birth_before_death(self):
         """ John February 18th, 2018
@@ -332,11 +336,14 @@ class Gedcom:
             This method checks if the birth date comes before the death date or not. 
             Method prints an error if anomalies are found.
         """
+        error_message_list=[]
         for people in self.indis.values():
             if(people.deat_dt==None):
                 continue
             elif(people.birt_dt>people.deat_dt):
-                print("Error, death date after birth date for individual with id : ", people.indi_id)
+                print("Error, death date after birth date for individual with id : "+people.indi_id)
+                error_message_list.append("Error, death date after birth date for individual with id : "+people.indi_id)
+        return error_message_list
 
     def us06_divorce_before_death(self, debug=False):
         """ Benji, Feb 21st, 2019
@@ -513,7 +520,7 @@ def main():
     gdm.us20_aunts_and_uncle()
 
     # Ray
-    gdm.us03_birth_before_marriage()
+    gdm.us02_birth_before_marriage()
     gdm.us11_no_bigamy()
 
     # John
@@ -522,5 +529,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # unittest.main(exit=False, verbosity=2)
-        
+    # unittest.main(exit=False, verbosity=2) 
