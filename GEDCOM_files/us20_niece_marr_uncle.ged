@@ -1,7 +1,7 @@
 0 HEAD
 1 SOUR Family Echo
 2 WWW http://www.familyecho.com/
-1 FILE us20_nephew_marr_aunt
+1 FILE us20_niece_marr_uncle
 1 DATE 24 FEB 2019
 1 DEST ANSTFILE
 1 GEDC
@@ -72,6 +72,7 @@
 1 SEX M
 1 BIRT
 2 DATE 2 NOV 1936
+1 FAMS @F4@
 1 FAMC @F1@
 0 @I7@ INDI
 1 NAME Karla /Pedersen/
@@ -81,7 +82,6 @@
 1 SEX F
 1 BIRT
 2 DATE 2 NOV 1936
-1 FAMS @F4@
 1 FAMC @F1@
 0 @I8@ INDI
 1 NAME Karlia /Weeber/
@@ -109,7 +109,6 @@
 1 SEX M
 1 BIRT
 2 DATE 6 OCT 1961
-1 FAMS @F4@
 1 FAMC @F3@
 0 @I11@ INDI
 1 NAME Molly /Pedersen/
@@ -119,6 +118,7 @@
 1 SEX F
 1 BIRT
 2 DATE 2 NOV 1962
+1 FAMS @F4@
 1 FAMC @F3@
 0 @F1@ FAM
 1 HUSB @I1@
@@ -148,9 +148,9 @@
 2 DATE 25 AUG 1960
 1 _CURRENT Y
 0 @F4@ FAM
-1 HUSB @I10@
-1 WIFE @I7@
+1 HUSB @I6@
+1 WIFE @I11@
 1 MARR
-2 DATE 29 JUN 1985
+2 DATE 26 JUL 1985
 1 _CURRENT Y
 0 TRLR
