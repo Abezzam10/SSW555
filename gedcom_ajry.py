@@ -208,9 +208,9 @@ class Gedcom:
     """                                           """
     """ ----------------------------------------- """
 
-    def us03_birth_before_marriage(self):
+    def us02_birth_before_marriage(self):
         """ Ray, Feb 22th, 2019
-            US03: Birth before marriage
+            US02: Birth before marriage
             Birth should occur before marriage of an individual
         """
 
