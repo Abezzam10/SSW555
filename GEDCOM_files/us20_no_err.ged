@@ -1,0 +1,164 @@
+0 HEAD
+1 SOUR Family Echo
+2 WWW http://www.familyecho.com/
+1 FILE us20_no_err
+1 DATE 24 FEB 2019
+1 DEST ANSTFILE
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 SUBM @I1@
+2 NAME Benjamin
+1 SUBN
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Heriberto /Pedersen/
+2 GIVN Heriberto
+2 SURN Pedersen
+2 _MARNM Pedersen
+1 SEX M
+1 BIRT
+2 DATE 13 AUG 1910
+1 DEAT Y
+2 DATE 30 JUL 1975
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Amelia /Royceston/
+2 GIVN Amelia
+2 SURN Royceston
+2 _MARNM Royceston
+1 SEX F
+1 BIRT
+2 DATE 2 JUN 1913
+1 DEAT Y
+2 DATE 4 DEC 1988
+1 FAMS @F1@
+1 FAMS @F2@
+0 @I3@ INDI
+1 NAME Rafinha /Weeber/
+2 GIVN Rafinha
+2 SURN Weeber
+2 _MARNM Weeber
+1 SEX M
+1 BIRT
+2 DATE 1 OCT 1911
+1 DEAT Y
+2 DATE 3 FEB 1999
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Ably /Pedersen/
+2 GIVN Ably
+2 SURN Pedersen
+2 _MARNM Pedersen
+1 SEX M
+1 BIRT
+2 DATE 2 NOV 1936
+1 FAMS @F3@
+1 FAMC @F1@
+0 @I5@ INDI
+1 NAME Valina /Garcia/
+2 GIVN Valina
+2 SURN Garcia
+2 _MARNM Garcia
+1 SEX F
+1 BIRT
+2 DATE 16 JAN 1940
+1 FAMS @F3@
+0 @I6@ INDI
+1 NAME Gisilbert /Pedersen/
+2 GIVN Gisilbert
+2 SURN Pedersen
+2 _MARNM Pedersen
+1 SEX M
+1 BIRT
+2 DATE 2 NOV 1936
+1 FAMC @F1@
+0 @I7@ INDI
+1 NAME Karla /Pedersen/
+2 GIVN Karla
+2 SURN Pedersen
+2 _MARNM Pedersen
+1 SEX F
+1 BIRT
+2 DATE 2 NOV 1936
+1 FAMC @F1@
+0 @I8@ INDI
+1 NAME Karlia /Weeber/
+2 GIVN Karlia
+2 SURN Weeber
+2 _MARNM Weeber
+1 SEX F
+1 BIRT
+2 DATE 22 MAY 1941
+1 FAMC @F2@
+0 @I9@ INDI
+1 NAME Gonza /Weeber/
+2 GIVN Gonza
+2 SURN Weeber
+2 _MARNM Weeber
+1 SEX M
+1 BIRT
+2 DATE 22 MAY 1941
+1 FAMC @F2@
+0 @I10@ INDI
+1 NAME Cam /Pedersen/
+2 GIVN Cam
+2 SURN Pedersen
+2 _MARNM Pedersen
+1 SEX M
+1 BIRT
+2 DATE 30 MAR 1961
+1 FAMS @F4@
+1 FAMC @F3@
+0 @I11@ INDI
+1 NAME Molly /Pedersen/
+2 GIVN Molly
+2 SURN Pedersen
+2 _MARNM Pedersen
+1 SEX F
+1 BIRT
+2 DATE 2 NOV 1962
+1 FAMC @F3@
+0 @I12@ INDI
+1 NAME Natali /Connor/
+2 GIVN Natali
+2 SURN Connor
+2 _MARNM Connor
+1 SEX F
+1 BIRT
+2 DATE 30 MAR 1965
+1 FAMS @F4@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I4@
+1 CHIL @I6@
+1 CHIL @I7@
+1 MARR
+2 DATE 10 APR 1935
+1 DIV
+2 DATE 7 MAY 1939
+1 _CURRENT N
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I2@
+1 CHIL @I8@
+1 CHIL @I9@
+1 MARR
+2 DATE 14 APR 1940
+1 _CURRENT Y
+0 @F3@ FAM
+1 HUSB @I4@
+1 WIFE @I5@
+1 CHIL @I10@
+1 CHIL @I11@
+1 MARR
+2 DATE 25 AUG 1960
+1 _CURRENT Y
+0 @F4@ FAM
+1 HUSB @I10@
+1 WIFE @I12@
+1 MARR
+2 DATE 3 JUL 1985
+1 _CURRENT Y
+0 TRLR
