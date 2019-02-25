@@ -297,12 +297,13 @@ class Gedcom:
         print(f"Tested current_date: {current_time}")
         print(error_mes)
 
-    def us22_unique_ids(self):
+    def us22_unique_ids(self, debug=False):
         """ Javer, Feb 23, 2019
             Unique Ids
             To make sure all individual IDs should be unique and all family IDs should be unique 
         """
         collection = MongoDB().get_collection('entity')
+        err_msg_lst = []
 
         # for indi
         indi_cond = {'cat': 'indi'}
@@ -310,9 +311,9 @@ class Gedcom:
         dict_of_indi = {}
         for doc in result_of_indi_docs:
             # if doc['_id'] == "@I1@": # test for id conflict
-                # doc['_id'] = "@I2@"
+            #     doc['_id'] = "@I2@"
             if doc['_id'] in dict_of_indi.keys():
-                print(f"Conflict of individual id: {doc['_id']}")
+                err_msg_lst.append(f"Conflict of individual id: {doc['_id']}")
             else:
                 dict_of_indi[doc['_id']] = doc
 
@@ -324,9 +325,15 @@ class Gedcom:
             # if doc['_id'] == "@F1@": # test for id conflict
             #     doc['_id'] = "@F2@"
             if doc['_id'] in dict_of_fam.keys():
-                print(f"Conflict of individual id: {doc['_id']}")
+                err_msg_lst.append(f"Conflict of individual id: {doc['_id']}")
             else:
                 dict_of_fam[doc['_id']] = doc
+        
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                print(err_msg)
 
     def us05_marriage_before_death(self):
         """ John February 23, 2018
@@ -334,6 +341,7 @@ class Gedcom:
             This method checks if the marriage date is before the husband's or wifes's death date or not.
             Method prints an error if anomalies are found.
         """
+        error_message_list=[]
         for fam in self.fams.values():
             for indi in self.indis.values():
                 if (fam.husb_id==indi.indi_id):
@@ -342,8 +350,11 @@ class Gedcom:
                     wife_dt = indi.deat_dt
             if(husb_dt !=None and fam.marr_dt>husb_dt):
                 print("Error, death before marriage of husband with id : ", fam.husb_id)
+                error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
             if(wife_dt !=None and fam.marr_dt>wife_dt):
                 print("Error, death before her marriage of wife with id : ", fam.wife_id)
+                error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
+        return error_message_list
                               
     def us03_birth_before_death(self):
         """ John February 18th, 2018
@@ -351,11 +362,14 @@ class Gedcom:
             This method checks if the birth date comes before the death date or not. 
             Method prints an error if anomalies are found.
         """
+        error_message_list=[]
         for people in self.indis.values():
             if(people.deat_dt==None):
                 continue
             elif(people.birt_dt>people.deat_dt):
-                print("Error, death date after birth date for individual with id : ", people.indi_id)
+                print("Error, death date before birth date for individual with id : "+people.indi_id)
+                error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
+        return error_message_list
 
     def us06_divorce_before_death(self, debug=False):
         """ Benji, Feb 21st, 2019
@@ -531,7 +545,7 @@ def main():
     gdm.us20_aunts_and_uncle()
 
     # Ray
-    gdm.us03_birth_before_marriage()
+    gdm.us02_birth_before_marriage()
     gdm.us11_no_bigamy()
 
     # John
@@ -540,5 +554,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # unittest.main(exit=False, verbosity=2)
-        
+    # unittest.main(exit=False, verbosity=2) 
