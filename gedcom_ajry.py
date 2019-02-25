@@ -214,29 +214,48 @@ class Gedcom:
             Birth should occur before marriage of an individual
         """
 
+        flag = False    #For Testing 
         for uid, indi in self.indis.items(): 
             temp = indi.birt_dt
-            temp2 = indi.fam_s
-            for fid, fam in self.fams.items(): 
-                if fam.fam_id == temp2: 
+            temp2 = ""
+            for temp2 in indi.fam_s:
+                break
+            for fid, fam in self.fams.items():
+            
+                if temp2 == fam.fam_id: 
                     if temp > fam.marr_dt: 
                         print("Error! Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
+                        return False
                     else: 
                         print('Valid Marriage for Family: ', fam.fam_id)
+                        flag = True
+        
+        return flag
         
     def us11_no_bigamy(self): 
         """ Ray, Feb 22th, 2019
             US11: No bigamy
             Married person should not be in another marriage
         """
+
+        flag = False
         for indi, fam_s in self.indis.items():
-            temp = fam_s.fam_s
+            dummy = ""
+            temp = ""
+            for temp in fam_s.fam_s:
+                break
+            for a in fam_s.fam_s: 
+                dummy = dummy + a
             for fid, fam in self.fams.items(): 
                 if fam.fam_id == temp: 
-                    if sys.getsizeof(fam_s.fam_s) > 53 and fam.div_dt != None:
+                    if sys.getsizeof(dummy) > 53 and fam.div_dt != None:
                         print("Error! Cannot have multiple spouses!")
+                        return False
                     else: 
                         print("Good Civilian!")
+                        flag = True
+        
+        return flag
 
     def us01_date_validate(self):
         """ Javer, Feb 19, 2019
@@ -383,7 +402,6 @@ class Gedcom:
         else:
             for err_msg in err_msg_lst:
                 Warn.warn20(*err_msg)
-
 
 
 class Entity:
