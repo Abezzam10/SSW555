@@ -10,10 +10,7 @@ res1 = ['Error, death date before birth date for individual with id : @I7@']
 res2 = ['Error, death date before birth date for individual with id : @I2@']
 res3 = ['Error, death date before birth date for individual with id : @I15@']
 res4 = []
-gdm1.pretty_print()
-gdm2.pretty_print()
-gdm3.pretty_print()
-gdm4.pretty_print()
+
 class Sprint1us03_john(unittest.TestCase):
    def test_us05_marriage_before_death(self):
         self.assertCountEqual(gdm1.us03_birth_before_death(),res1)
