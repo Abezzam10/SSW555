@@ -349,10 +349,10 @@ class Gedcom:
                 elif(fam.wife_id==indi.indi_id):
                     wife_dt = indi.deat_dt
             if(husb_dt !=None and fam.marr_dt>husb_dt):
-                print("Error, death before marriage of husband with id : ", fam.husb_id)
+                print("Error, (US05) death before marriage of husband with id : ", fam.husb_id)
                 error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
             if(wife_dt !=None and fam.marr_dt>wife_dt):
-                print("Error, death before her marriage of wife with id : ", fam.wife_id)
+                print("Error, (US05) death before her marriage of wife with id : ", fam.wife_id)
                 error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
         return error_message_list
                               
@@ -367,7 +367,7 @@ class Gedcom:
             if(people.deat_dt==None):
                 continue
             elif(people.birt_dt>people.deat_dt):
-                print("Error, death date before birth date for individual with id : "+people.indi_id)
+                print("Error, (US03) death date before birth date for individual with id : "+people.indi_id)
                 error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
         return error_message_list
 
