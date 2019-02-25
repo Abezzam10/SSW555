@@ -35,6 +35,8 @@ class Gedcom:
         self.fams = {}
         self.path_validate()
 
+        self.err22_msg_tup = []
+
         self.mongo_instance = MongoDB()
 
         self.data_parser()
@@ -114,7 +116,10 @@ class Gedcom:
 
             if lvl == '0' and tag in cat_pool:  # find a new entity
                 if curr_entity:  # update the current entity in data containers
-                    cat_cont[curr_cat][curr_id] = curr_entity
+                    if curr_id not in cat_cont[curr_cat]:
+                        cat_cont[curr_cat][curr_id] = curr_entity
+                    else:
+                        self.err22_msg_tup.append((curr_id, curr_cat))
                     curr_entity, curr_cat, curr_id = None, None, None  # *NOTE* can be deleted maybe?
                 
                 # when tag in ('INDI', 'FAM'), arg is the id of this entity
@@ -224,10 +229,10 @@ class Gedcom:
             
                 if temp2 == fam.fam_id: 
                     if temp > fam.marr_dt: 
-                        print("Error! Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
+                        print("Error US02: Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
                         return False
                     else: 
-                        print('Valid Marriage for Family: ', fam.fam_id)
+                        #print('Valid Marriage for Family: ', fam.fam_id)
                         flag = True
         
         return flag
@@ -249,10 +254,10 @@ class Gedcom:
             for fid, fam in self.fams.items(): 
                 if fam.fam_id == temp: 
                     if sys.getsizeof(dummy) > 53 and fam.div_dt != None:
-                        print("Error! Cannot have multiple spouses!")
+                        print(f"Error US11: Cannot have multiple spouses!")
                         return False
                     else: 
-                        print("Good Civilian!")
+                        #print("Good Civilian!")
                         flag = True
         
         return flag
@@ -330,10 +335,13 @@ class Gedcom:
                 dict_of_fam[doc['_id']] = doc
         
         if debug:
-            return err_msg_lst
+            return self.err22_msg_tup
+            #return err_msg_lst
         else:
-            for err_msg in err_msg_lst:
-                print(err_msg)
+            #for err_msg in err_msg_lst:
+            #    print(err_msg)
+            for err_msg in self.err22_msg_tup:
+                Error.err22(*err_msg)
 
     def us05_marriage_before_death(self):
         """ John February 23, 2018
@@ -346,13 +354,13 @@ class Gedcom:
             for indi in self.indis.values():
                 if (fam.husb_id==indi.indi_id):
                     husb_dt = indi.deat_dt
-                elif(fam.wife_id==indi.indi_id):
+                if(fam.wife_id==indi.indi_id):
                     wife_dt = indi.deat_dt
             if(husb_dt !=None and fam.marr_dt>husb_dt):
-                print("Error, (US05) death before marriage of husband with id : ", fam.husb_id)
+                print("Error US05: death before marriage of husband with id : ", fam.husb_id)
                 error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
             if(wife_dt !=None and fam.marr_dt>wife_dt):
-                print("Error, (US05) death before her marriage of wife with id : ", fam.wife_id)
+                print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
                 error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
         return error_message_list
                               
@@ -367,7 +375,7 @@ class Gedcom:
             if(people.deat_dt==None):
                 continue
             elif(people.birt_dt>people.deat_dt):
-                print("Error, (US03) death date before birth date for individual with id : "+people.indi_id)
+                print("Error US03: death date before birth date for individual with id : "+people.indi_id)
                 error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
         return error_message_list
 
@@ -504,6 +512,12 @@ class Error:
             print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
                 f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}')
         print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.')
+
+    @classmethod
+    def err22(cls, entt_id, entt_cat):
+        """ return error message for User Stroy 22"""
+        us_id = 'US22'
+        print(cls.header.format(us_id) + f'The ID of {entt_cat} {entt_id} is already existed, this record was skipped.')
 
 class Warn:
     """ A class used to bundle up all of the warning message

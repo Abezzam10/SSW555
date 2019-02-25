@@ -27,6 +27,7 @@ htmlcov/
 *.sql
 *.json
 *jrr*.*
+Project*/
 # Automated ignore Python parts below
 
 # Byte-compiled / optimized / DLL files
