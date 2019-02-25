@@ -341,8 +341,8 @@ class Gedcom:
             if(people.deat_dt==None):
                 continue
             elif(people.birt_dt>people.deat_dt):
-                print("Error, death date after birth date for individual with id : "+people.indi_id)
-                error_message_list.append("Error, death date after birth date for individual with id : "+people.indi_id)
+                print("Error, death date before birth date for individual with id : "+people.indi_id)
+                error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
         return error_message_list
 
     def us06_divorce_before_death(self, debug=False):
