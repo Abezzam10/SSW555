@@ -365,7 +365,6 @@ class Gedcom:
         error_message_list=[]
         for people in self.indis.values():
             if(people.deat_dt==None):
-                print('INDI : ',people.indi_id)
                 continue
             elif(people.birt_dt>people.deat_dt):
                 print("Error, (US03) death date before birth date for individual with id : "+people.indi_id)
@@ -540,6 +539,10 @@ def main():
     gdm.us01_date_validate()
     gdm.us22_unique_ids()
 
+    # John
+    gdm.us03_birth_before_death()
+    gdm.us05_marriage_before_death()
+
     # Benji
     gdm = Gedcom('GEDCOM_files/us20_nephew_marr_aunt.ged')
     gdm.us06_divorce_before_death()
@@ -549,9 +552,7 @@ def main():
     gdm.us02_birth_before_marriage()
     gdm.us11_no_bigamy()
 
-    # John
-    gdm.us03_birth_before_death()
-    gdm.us05_marriage_before_death()
+    
 
 if __name__ == "__main__":
     main()
