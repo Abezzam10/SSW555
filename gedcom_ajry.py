@@ -540,6 +540,7 @@ def main():
     gdm.us22_unique_ids()
 
     # John
+    gdm = Gedcom('GEDCOM_files/test1_us03us05_john.ged')
     gdm.us03_birth_before_death()
     gdm.us05_marriage_before_death()
 
