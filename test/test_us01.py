@@ -2,8 +2,8 @@ import unittest
 from datetime import datetime
 from gedcom_ajry import Gedcom
 
-class Sprint1Test(unittest.TestCase):
-    """ Sprint1Test for Javer """
+class test_us01(unittest.TestCase):
+    """ Test cases for US01 """
     def setUp(self):
         self.current_date = datetime.now()
         self.gdm = Gedcom("./GEDCOM_files/proj02_test_by_javer.ged")

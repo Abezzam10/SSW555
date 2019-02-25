@@ -278,12 +278,13 @@ class Gedcom:
         print(f"Tested current_date: {current_time}")
         print(error_mes)
 
-    def us22_unique_ids(self):
+    def us22_unique_ids(self, debug=False):
         """ Javer, Feb 23, 2019
             Unique Ids
             To make sure all individual IDs should be unique and all family IDs should be unique 
         """
         collection = MongoDB().get_collection('entity')
+        err_msg_lst = []
 
         # for indi
         indi_cond = {'cat': 'indi'}
@@ -291,9 +292,9 @@ class Gedcom:
         dict_of_indi = {}
         for doc in result_of_indi_docs:
             # if doc['_id'] == "@I1@": # test for id conflict
-                # doc['_id'] = "@I2@"
+            #     doc['_id'] = "@I2@"
             if doc['_id'] in dict_of_indi.keys():
-                print(f"Conflict of individual id: {doc['_id']}")
+                err_msg_lst.append(f"Conflict of individual id: {doc['_id']}")
             else:
                 dict_of_indi[doc['_id']] = doc
 
@@ -305,9 +306,15 @@ class Gedcom:
             # if doc['_id'] == "@F1@": # test for id conflict
             #     doc['_id'] = "@F2@"
             if doc['_id'] in dict_of_fam.keys():
-                print(f"Conflict of individual id: {doc['_id']}")
+                err_msg_lst.append(f"Conflict of individual id: {doc['_id']}")
             else:
                 dict_of_fam[doc['_id']] = doc
+        
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                print(err_msg)
 
     def us05_marriage_before_death(self):
         """ John February 23, 2018
