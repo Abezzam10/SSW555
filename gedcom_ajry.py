@@ -365,6 +365,7 @@ class Gedcom:
         error_message_list=[]
         for people in self.indis.values():
             if(people.deat_dt==None):
+                print('INDI : ',people.indi_id)
                 continue
             elif(people.birt_dt>people.deat_dt):
                 print("Error, (US03) death date before birth date for individual with id : "+people.indi_id)
