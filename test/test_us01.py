@@ -6,7 +6,7 @@ class test_us01(unittest.TestCase):
     """ Test cases for US01 """
     def setUp(self):
         self.current_date = datetime.now()
-        self.gdm = Gedcom("./GEDCOM_files/proj02_test_by_javer.ged")
+        self.gdm = Gedcom("./GEDCOM_files/integration_no_err.ged")
         self.indis = self.gdm.indis
         self.fams = self.gdm.fams
 
