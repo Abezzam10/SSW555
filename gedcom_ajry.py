@@ -133,7 +133,7 @@ class Gedcom:
                     curr_entity[attr]['first'] = regex_obj.group(1)
                     curr_entity[attr]['last'] = regex_obj.group(2)
 
-                elif tag in ('CHIL', 'FAMS'):  # beware that the the value of CHIL is a set
+                elif tag in ('CHIL', 'FAMS'):  # 'CHIL' and 'FAMS' are sets
                     curr_entity[attr].add(arg)
 
                 else:
@@ -224,10 +224,9 @@ class Gedcom:
             
                 if temp2 == fam.fam_id: 
                     if temp > fam.marr_dt: 
-                        print("Error! Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
+                        print("Error US02: Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
                         return False
                     else: 
-                        print('Valid Marriage for Family: ', fam.fam_id)
                         flag = True
         
         return flag
@@ -249,10 +248,9 @@ class Gedcom:
             for fid, fam in self.fams.items(): 
                 if fam.fam_id == temp: 
                     if sys.getsizeof(dummy) > 53 and fam.div_dt != None:
-                        print("Error! Cannot have multiple spouses!")
+                        print("Error US11: Cannot have multiple spouses!")
                         return False
                     else: 
-                        print("Good Civilian!")
                         flag = True
         
         return flag
@@ -348,11 +346,11 @@ class Gedcom:
                     husb_dt = indi.deat_dt
                 elif(fam.wife_id==indi.indi_id):
                     wife_dt = indi.deat_dt
-            if(husb_dt !=None and fam.marr_dt>husb_dt):
-                print("Error, (US05) death before marriage of husband with id : ", fam.husb_id)
+            if husb_dt != None and fam.marr_dt > husb_dt:
+                print("Error US05: death before marriage of husband with id : ", fam.husb_id)
                 error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
-            if(wife_dt !=None and fam.marr_dt>wife_dt):
-                print("Error, (US05) death before her marriage of wife with id : ", fam.wife_id)
+            if wife_dt != None and fam.marr_dt > wife_dt:
+                print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
                 error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
         return error_message_list
                               
@@ -364,10 +362,10 @@ class Gedcom:
         """
         error_message_list=[]
         for people in self.indis.values():
-            if(people.deat_dt==None):
+            if people.deat_dt == None:
                 continue
-            elif(people.birt_dt>people.deat_dt):
-                print("Error, (US03) death date before birth date for individual with id : "+people.indi_id)
+            elif people.birt_dt > people.deat_dt:
+                print("Error US03: death date before birth date for individual with id : "+people.indi_id)
                 error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
         return error_message_list
 
