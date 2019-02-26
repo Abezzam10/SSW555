@@ -282,7 +282,7 @@ class Gedcom:
                     tmp_str += f"marriage date [{doc['marr_dt']}], "
                 if doc['div_dt'] is not None and doc['div_dt'] > current_time:
                     tmp_str += f"divorice date [{doc['div_dt']}]"
-                error_mes += f"Family entity ID: {doc['id']}, have incorrect {tmp_str}\n"
+                error_mes += f"Error US01: Family entity ID: {doc['id']}, have incorrect {tmp_str}\n"
 
             if doc['cat'] == 'indi':
                 # for individual
@@ -290,9 +290,8 @@ class Gedcom:
                     tmp_str += f"birth date [{doc['birt_dt']}], "
                 if doc['deat_dt'] is not None and doc['deat_dt'] > current_time:
                     tmp_str += f"deadth date [{doc['deat_dt']}]"
-                error_mes += f"Individual entity ID: {doc['id']}, have incorrect {tmp_str}\n"
+                error_mes += f"Error US01: Individual entity ID: {doc['id']}, have incorrect {tmp_str}\n"
         
-        print(f"Tested current_date: {current_time}")
         print(error_mes)
 
     def us22_unique_ids(self, debug=False):
@@ -311,7 +310,7 @@ class Gedcom:
             # if doc['id'] == "@I1@": # test for id conflict
             #     doc['id'] = "@I2@"
             if doc['id'] in dict_of_indi.keys():
-                err_msg_lst.append(f"Conflict of individual id: {doc['id']}")
+                err_msg_lst.append(f"Error US22: Conflict of individual id: {doc['id']}")
             else:
                 dict_of_indi[doc['id']] = doc
 
@@ -323,7 +322,7 @@ class Gedcom:
             # if doc['id'] == "@F1@": # test for id conflict
             #     doc['id'] = "@F2@"
             if doc['id'] in dict_of_fam.keys():
-                err_msg_lst.append(f"Conflict of individual id: {doc['id']}")
+                err_msg_lst.append(f"Error US22: Conflict of individual id: {doc['id']}")
             else:
                 dict_of_fam[doc['id']] = doc
         
