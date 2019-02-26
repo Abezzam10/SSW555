@@ -282,7 +282,7 @@ class Gedcom:
                     tmp_str += f"marriage date [{doc['marr_dt']}], "
                 if doc['div_dt'] is not None and doc['div_dt'] > current_time:
                     tmp_str += f"divorice date [{doc['div_dt']}]"
-                error_mes += f"Family entity ID: {doc['_id']}, have incorrect {tmp_str}\n"
+                error_mes += f"Family entity ID: {doc['id']}, have incorrect {tmp_str}\n"
 
             if doc['cat'] == 'indi':
                 # for individual
@@ -290,7 +290,7 @@ class Gedcom:
                     tmp_str += f"birth date [{doc['birt_dt']}], "
                 if doc['deat_dt'] is not None and doc['deat_dt'] > current_time:
                     tmp_str += f"deadth date [{doc['deat_dt']}]"
-                error_mes += f"Individual entity ID: {doc['_id']}, have incorrect {tmp_str}\n"
+                error_mes += f"Individual entity ID: {doc['id']}, have incorrect {tmp_str}\n"
         
         print(f"Tested current_date: {current_time}")
         print(error_mes)
@@ -308,24 +308,24 @@ class Gedcom:
         result_of_indi_docs = collection.find(indi_cond)
         dict_of_indi = {}
         for doc in result_of_indi_docs:
-            # if doc['_id'] == "@I1@": # test for id conflict
-            #     doc['_id'] = "@I2@"
-            if doc['_id'] in dict_of_indi.keys():
-                err_msg_lst.append(f"Conflict of individual id: {doc['_id']}")
+            # if doc['id'] == "@I1@": # test for id conflict
+            #     doc['id'] = "@I2@"
+            if doc['id'] in dict_of_indi.keys():
+                err_msg_lst.append(f"Conflict of individual id: {doc['id']}")
             else:
-                dict_of_indi[doc['_id']] = doc
+                dict_of_indi[doc['id']] = doc
 
         # for fam
         fam_cond = {'cat': 'fam'}
         result_of_fam_docs = collection.find(fam_cond)
         dict_of_fam = {}
         for doc in result_of_fam_docs:
-            # if doc['_id'] == "@F1@": # test for id conflict
-            #     doc['_id'] = "@F2@"
-            if doc['_id'] in dict_of_fam.keys():
-                err_msg_lst.append(f"Conflict of individual id: {doc['_id']}")
+            # if doc['id'] == "@F1@": # test for id conflict
+            #     doc['id'] = "@F2@"
+            if doc['id'] in dict_of_fam.keys():
+                err_msg_lst.append(f"Conflict of individual id: {doc['id']}")
             else:
-                dict_of_fam[doc['_id']] = doc
+                dict_of_fam[doc['id']] = doc
         
         if debug:
             return err_msg_lst
@@ -467,7 +467,7 @@ class Individual(Entity):
     def mongo_data(self):
         """ return a dictionary with mongodb data for database"""
         return {
-            '_id': self.indi_id,
+            'id': self.indi_id,
             'cat': 'indi',  # only used for mongodb to distinguish entity catagory
             'name': self.name,
             'sex': self.sex,
@@ -502,7 +502,7 @@ class Family(Entity):
     def mongo_data(self):
         """ return a dictionary with mongodb data for database"""
         return {
-            '_id': self.fam_id,
+            'id': self.fam_id,
             'cat': 'fam',
             'marr_dt': self.marr_dt,
             'div_dt': self.div_dt,
@@ -555,8 +555,8 @@ class Warn:
 def main():
     """ Entrance"""
 
-    # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
-    gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
+    gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
+    # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
     
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
@@ -565,9 +565,9 @@ def main():
     
     """ User Stories for the Spint1 """
     # Javer
-    gdm.us01_date_validate()
+    # gdm.us01_date_validate()
     gdm.us22_unique_ids()
-    
+    return
     # John
     gdm.us03_birth_before_death()
     gdm.us05_marriage_before_death()
