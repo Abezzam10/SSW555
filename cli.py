@@ -10,8 +10,8 @@ from gedcom_ajry import MongoDB
 def gedcom(gedfile):
     ged = Gedcom(gedfile)
     mongo_instance = MongoDB()
-    mongo_instance.delete_database()
-    ged.insert_to_mongo()
+    # mongo_instance.delete_database()
+    # ged.insert_to_mongo()
     ged.pretty_print()
     ged.us01_date_validate()
     ged.us02_birth_before_marriage()
