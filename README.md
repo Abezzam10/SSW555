@@ -9,18 +9,18 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
   - Aniruddha Pimple(John)
   - Jiahua Zhou(Javer)
 
-- **User stories for sprint 1**:
+- **User stories for sprint 2**:
 
 |Story ID|Story Name|Owner|
 |:---:|:---:|:---:|
-|US01|Dates before current date|Javer|
-|US02|Birth before marriage|Ray|
-|US03|Birth before death|John|
-|US05|Marriage before death|John|
-|US06|Divorce before death|Benji|
-|US11|No bigamy|Ray|
-|US20|Aunts and uncles|Benji|
-|US22|Unique IDs|Javer|
+|US04|Marriage before divorce|John|
+|US07|Less then 150 years old|Benji|
+|US08|Birth before marriage of parents|Ray|
+|US13|Siblings spacing|John|
+|US14|Multiple births <= 5|Javer|
+|US16|Male last names|Javer|
+|US23|Unique name and birth date|Ray|
+|US26|Corresponding entries|Benji|
 
 ---
 
