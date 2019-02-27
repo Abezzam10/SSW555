@@ -12,25 +12,25 @@ class test_us02(unittest.TestCase):
     def test_mar_after_birt(self):
         """ Marriage is after birth"""
        
-        ged = Gedcom('./GEDCOM_files/us02_mar_after_birt.ged')
+        ged = Gedcom('./GEDCOM_files/us02/us02_mar_after_birt.ged')
         self.assertEqual(ged.us02_birth_before_marriage(), True)
     
     def test_mar_before_birt_husb(self):
         """ Marriage is before birth of Husband"""
        
-        ged = Gedcom('./GEDCOM_files/us02_mar_before_birt.ged')
+        ged = Gedcom('./GEDCOM_files/us02/us02_mar_before_birt.ged')
         self.assertEqual(ged.us02_birth_before_marriage(), False)
     
     def test_mar_before_birt_wife(self):
         """ Marriage is before birth of Wife"""
        
-        ged = Gedcom('./GEDCOM_files/us02_mar_before_birt.ged')
+        ged = Gedcom('./GEDCOM_files/us02/us02_mar_before_birt.ged')
         self.assertEqual(ged.us02_birth_before_marriage(), False)
     
     def test_mar_on_birt_wife(self):
         """ Marriage is on the birth date"""
        
-        ged = Gedcom('./GEDCOM_files/us02_mar_on_birt.ged')
+        ged = Gedcom('./GEDCOM_files/us02/us02_mar_on_birt.ged')
         self.assertEqual(ged.us02_birth_before_marriage(), False)
         
 
