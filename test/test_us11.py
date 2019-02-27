@@ -25,7 +25,7 @@ class test_us11(unittest.TestCase):
     def test_husb_two_marr(self):
         """ Husband is involved in multiple marriages"""
        
-        ged = Gedcom('./GEDCOM_files/us11_no_bigamy.ged')
+        ged = Gedcom('./GEDCOM_files/us11/us11_no_bigamy.ged')
         self.assertEqual(ged.us11_no_bigamy(), False)
         
 
