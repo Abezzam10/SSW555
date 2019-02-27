@@ -46,8 +46,8 @@ Note that it's required to use the dot(`.`) to represent the current directory i
 1. On the GitHub repository webpage, create your own branch with the name pattern `sprint2_initial` (e.g. `sprint2_benji`) based on branch `sprint2`
 
 2. Go to the command line and pull down your own branch with following steps, with the example of branch `sprint2_benji`:
-  1. `git checkout sprint2_benji`
-  2. `git pull --all`
+    1. `git checkout sprint2_benji`
+    2. `git pull --all`
 
 3. Develop your user stories, test cases on your branch and push it on your own branch. I will do the merging carefully after you push the branch.
 
