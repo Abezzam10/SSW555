@@ -1,0 +1,10 @@
+language: python
+
+python:
+  - "3.7-dev"  # 3.7 development branch
+    
+install:
+  - pip3 install -r requirements.txt # dependency install
+
+script:
+  - python -m unittest discover test # run the unittest
