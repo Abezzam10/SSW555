@@ -27,7 +27,7 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 ## 0. Table of Content
 
 1. [Installation & PyPI](#1-installation--pypi)
-2. [Test Strategy](#2-work-flow-of-version-control)
+2. [Test Strategy](#2-workflow-of-version-control)
 3. [Project Overview Link](Project_overview.md)
 4. [Coding Style Guideline](coding_style_specification.md)
 
@@ -35,7 +35,7 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 
 We havn't update the [package on PyPI](https://pypi.org/project/GEDCOM-Benji/) for a while as it takes more effort than we thought for the update of product attributes. However you can use a `-e` or `--editable` option in `pip3` command to install a editable version of package in your environment. With `--editable` option, the functionality of the command line will change along with the change of code.
 
-```py
+```sh
 pip3 install --editable .
 ```
 
