@@ -35,11 +35,16 @@ class Gedcom:
         self.fams = {}
         self.path_validate()
 
+
+        self.errors = {
+                        'us22': []
+                    }  # this dictionary is used to store the error/anomally that are supposed to find during the interpretation of the GEDCOM file
+
         self.mongo_instance = MongoDB()
 
         self.data_parser()
         self.lst_to_obj()
-        #self.pretty_print()
+
 
     def path_validate(self):
         """ If a invalid path is given, raise an OSError"""
@@ -114,7 +119,12 @@ class Gedcom:
 
             if lvl == '0' and tag in cat_pool:  # find a new entity
                 if curr_entity:  # update the current entity in data containers
-                    cat_cont[curr_cat][curr_id] = curr_entity
+                    
+                    if curr_id in cat_cont[curr_cat]:  # NOTE: check for US22
+                        self.errors['us22'].append((curr_id, curr_cat))
+                    else:
+                        cat_cont[curr_cat][curr_id] = curr_entity
+
                     curr_entity, curr_cat, curr_id = None, None, None  # *NOTE* can be deleted maybe?
                 
                 # when tag in ('INDI', 'FAM'), arg is the id of this entity
@@ -201,6 +211,15 @@ class Gedcom:
         
         return entts
 
+    def _earlier_deat_dt_in_fam(self, fam_id):
+        """ return the smaller(earlier) deat_dt of the given indi_id"""
+        fam = self.fams[fam_id]
+        husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]
+
+        if husb.deat_dt and wife.deat_dt:
+            return min(husb.deat_dt, wife.deat_dt)  # return the smaller(earlier) datetime
+        else:
+            return husb.deat_dt or wife.deat_dt  # 3 possible return values: husb.deat_dt, wife.deat_dt, None
 
     """ ----------------------------------------- """
     """                                           """
@@ -231,29 +250,53 @@ class Gedcom:
         
         return flag
         
-    def us11_no_bigamy(self): 
+    def us11_no_bigamy(self, debug=False): 
         """ Ray, Feb 22th, 2019
             US11: No bigamy
             Married person should not be in another marriage
+            :: refactored at Feb 27th by Benji
         """
-
-        flag = False
-        for indi, fam_s in self.indis.items():
-            dummy = ""
-            temp = ""
-            for temp in fam_s.fam_s:
-                break
-            for a in fam_s.fam_s: 
-                dummy = dummy + a
-            for fid, fam in self.fams.items(): 
-                if fam.fam_id == temp: 
-                    if sys.getsizeof(dummy) > 53 and fam.div_dt != None:
-                        print("Error US11: Cannot have multiple spouses!")
-                        return False
-                    else: 
-                        flag = True
         
-        return flag
+        #flag = False
+        #for indi, fam_s in self.indis.items():
+        #    dummy = ""
+        #    temp = ""
+        #    for temp in fam_s.fam_s:
+        #        break
+        #    for a in fam_s.fam_s: 
+        #        dummy = dummy + a
+        #    for fid, fam in self.fams.items(): 
+        #        if fam.fam_id == temp: 
+        #            if sys.getsizeof(dummy) > 53 and fam.div_dt != None:
+        #                print("Error US11: Cannot have multiple spouses!")
+        #                return False
+        #            else: 
+        #                flag = True
+        #
+        #return flag
+
+        err_msg_dct = defaultdict(set) 
+        
+        for indi in self.indis.values():
+            if len(indi.fam_s) > 1:  # multi-marriage
+       
+                marr_range_tups = []  # [(fam_id, marr_start, marr_end), ...]
+                for fam in [self.fams[fam_id] for fam_id in indi.fam_s]:
+                    # for each marriage, it starts at marr_dt, it ends at either divorce or death of one of the spouse
+                    marr_range_tups.append((fam.fam_id, fam.marr_dt, fam.div_dt or self._earlier_deat_dt_in_fam(fam.fam_id)))
+                prev_fam_id, prev_start, prev_end = None, None, None
+                for fam_id, start, end in sorted(marr_range_tups, key=lambda x: x[1]):
+                    if prev_fam_id is None:
+                        prev_fam_id, prev_start, prev_end = fam_id, start, end
+                        continue
+
+                    if prev_end is None or (prev_end is not None and prev_end > start):
+                        err_msg_dct['|'.join((indi.name['first'], indi.name['last'], indi.indi_id))].update((prev_fam_id, fam_id))
+                        
+        if debug:
+            return err_msg_dct
+        else:
+            Error.err11(err_msg_dct)
 
     def us01_date_validate(self):
         """ Javer, Feb 19, 2019
@@ -300,38 +343,12 @@ class Gedcom:
             Unique Ids
             To make sure all individual IDs should be unique and all family IDs should be unique 
         """
-        collection = MongoDB().get_collection('entity')
-        err_msg_lst = []
 
-        # for indi
-        indi_cond = {'cat': 'indi'}
-        result_of_indi_docs = collection.find(indi_cond)
-        dict_of_indi = {}
-        for doc in result_of_indi_docs:
-            # if doc['id'] == "@I1@": # test for id conflict
-            #     doc['id'] = "@I2@"
-            if doc['id'] in dict_of_indi.keys():
-                err_msg_lst.append(f"Conflict of individual id: {doc['id']}")
-            else:
-                dict_of_indi[doc['id']] = doc
-
-        # for fam
-        fam_cond = {'cat': 'fam'}
-        result_of_fam_docs = collection.find(fam_cond)
-        dict_of_fam = {}
-        for doc in result_of_fam_docs:
-            # if doc['id'] == "@F1@": # test for id conflict
-            #     doc['id'] = "@F2@"
-            if doc['id'] in dict_of_fam.keys():
-                err_msg_lst.append(f"Conflict of individual id: {doc['id']}")
-            else:
-                dict_of_fam[doc['id']] = doc
-        
         if debug:
-            return err_msg_lst
+            return self.errors['us22']
         else:
-            for err_msg in err_msg_lst:
-                print(err_msg)
+            for err_msg in self.errors['us22']:
+                Error.err22(*err_msg)          
 
     def us05_marriage_before_death(self):
         """ John February 23, 2018
@@ -339,21 +356,26 @@ class Gedcom:
             This method checks if the marriage date is before the husband's or wifes's death date or not.
             Method prints an error if anomalies are found.
         """
-        error_message_list=[]
+        error_message_list = []
+        
         for fam in self.fams.values():
             for indi in self.indis.values():
-                if (fam.husb_id==indi.indi_id):
+                
+                if fam.husb_id == indi.indi_id:
                     husb_dt = indi.deat_dt
-                elif(fam.wife_id==indi.indi_id):
+                if fam.wife_id == indi.indi_id:
                     wife_dt = indi.deat_dt
-            if husb_dt != None and fam.marr_dt > husb_dt:
+            
+            if husb_dt is not None and fam.marr_dt > husb_dt:
                 print("Error US05: death before marriage of husband with id : ", fam.husb_id)
                 error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
-            if wife_dt != None and fam.marr_dt > wife_dt:
+            
+            if wife_dt is not None and fam.marr_dt > wife_dt:
                 print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
                 error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
+        
         return error_message_list
-                              
+
     def us03_birth_before_death(self):
         """ John February 18th, 2018
             US03: Birth before Death
@@ -533,6 +555,25 @@ class Error:
                 f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}')
         print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.')
 
+    @classmethod
+    def err22(cls, entt_id, entt_cat):
+        """ return error message for User Stroy 22"""
+        us_id = 'US22'
+        cat = 'individual' if entt_cat == 'INDI' else 'family' 
+        print(cls.header.format(us_id) + f'The ID of {cat} {entt_id} was existed already. Entity omitted during the build')
+
+    @classmethod
+    def err11(cls, err_msg_dct):
+        """ print error message for User Story 11
+            name_id: 'first|last|id'
+            fam_info: set of fam_id
+        """
+        us_id = 'US11'
+        for name_id, fam_info in err_msg_dct.items():
+            first, last, indi_id = name_id.split('|')
+            print(Error.header.format(us_id) + 'The individual {0}, {1} {2}, is in marriage {3} at the same time.'.format(indi_id, first, last, ', '.join(fam_info)))
+
+
 class Warn:
     """ A class used to bundle up all of the warning message
         the method naming pattern is warn[us_ID](*args, *kwargs)
@@ -556,7 +597,6 @@ def main():
     """ Entrance"""
 
     gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
-    # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
     
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
@@ -565,15 +605,14 @@ def main():
     
     """ User Stories for the Spint1 """
     # Javer
-    # gdm.us01_date_validate()
+    gdm.us01_date_validate()
     gdm.us22_unique_ids()
-    return
+    
     # John
     gdm.us03_birth_before_death()
     gdm.us05_marriage_before_death()
 
     # Benji
-    gdm = Gedcom('GEDCOM_files/us20_nephew_marr_aunt.ged')
     gdm.us06_divorce_before_death()
     gdm.us20_aunts_and_uncle()
 
