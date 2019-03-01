@@ -437,6 +437,53 @@ class Gedcom:
             for err_msg in err_msg_lst:
                 Warn.warn20(*err_msg)
 
+    def us04_marr_b4_div(self, debug=False):
+        """ John, <time you manipulate the code>
+            US04: Marriage before divorce
+            <definition of the user story>
+        """
+
+    def us07_less_than_150_yrs(self, debug=False):
+        """ Benji, <time you manipulate the code>
+            US07: Less than 150 years old
+            <definition of the user story>
+        """
+    
+    def us08_birt_b4_marr_of_par(self, debug=False):
+        """ Ray, <time you manipulate the code>
+            US08: Birth before marriage of parents
+            <definition of the user story>
+        """
+
+    def us13_sibling_spacing(self, debug=False):
+        """ John, <time you manipulate the code>
+            US13: Siblings spacing
+            <definition of the user story>
+        """
+
+    def us14_multi_birt_less_than_5(self, debug=False):
+        """ Javer, <time you manipulate the code>
+            US14: Multiple births <= 5
+            <definition of the user story>
+        """
+
+    def us16_male_last_name(self, debug=False):
+        """ Javer, <time you manipulate the code>
+            US16: Male last names
+            <definition of the user story>
+        """
+
+    def us23_unique_name_and_birt(self, debug=False):
+        """ Ray, <time you manipulate the code>
+            US23: Unique name and birth date
+            <definition of the user story>
+        """
+
+    def us26_corrspnding_entries(self, debug=False):
+        """ Benji, <time you manipulate the code>
+            US26: Corresponding entries
+            <definition of the user story>
+        """
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
