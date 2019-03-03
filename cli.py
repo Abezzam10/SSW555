@@ -10,7 +10,9 @@ from gedcom_ajry import MongoDB
 def gedcom(gedfile):
     ged = Gedcom(gedfile)
     mongo_instance = MongoDB()
-    mongo_instance.delete_database()
+    # mongo_instance.delete_database()
+    mongo_instance.drop_collection("family")
+    mongo_instance.drop_collection("individual")
     ged.insert_to_mongo()
     ged.pretty_print()
     ged.us01_date_validate()
@@ -21,4 +23,6 @@ def gedcom(gedfile):
     ged.us11_no_bigamy()
     ged.us20_aunts_and_uncle()
     ged.us22_unique_ids()
+
+    ged.us16_male_last_name()
 

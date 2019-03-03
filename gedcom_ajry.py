@@ -41,6 +41,7 @@ class Gedcom:
                     }  # this dictionary is used to store the error/anomally that are supposed to find during the interpretation of the GEDCOM file
 
         self.mongo_instance = MongoDB()
+        self.formatted_data = {"family":{}, "individual":{}}    # formatted data into db's structure
 
         self.data_parser()
         self.lst_to_obj()
@@ -150,6 +151,50 @@ class Gedcom:
                     curr_entity[attr] = arg
         cat_cont[curr_cat][curr_id] = curr_entity
 
+    def format_data_structure(self):
+        """ format the data into db structure
+        """
+        for fam_id, family in self.fams.items():
+            tmp_dict = {}
+            tmp_dict['fam_id'] = fam_id
+            tmp_dict['members'] = []
+            tmp_dict['husb_id'] = family.husb_id
+            tmp_dict['wife_id'] = family.wife_id
+            tmp_dict['marr_dt'] = family.marr_dt
+            tmp_dict['div_dt'] = family.div_dt
+            tmp_dict['both_alive'] = None
+
+            if family.husb_id in self.indis and family.wife_id in self.indis:
+
+                if self.indis[family.husb_id]['deat_dt'] == None and self.indis[family.wife_id]['deat_dt'] == None:
+                    tmp_dict['both_alive'] = True
+                else:
+                    tmp_dict['both_alive'] = False
+   
+            self.formatted_data['family'][fam_id] = tmp_dict
+
+        for indi_id, individual in self.indis.items():
+            tmp_dict = {}
+            tmp_dict['indi_id'] = indi_id
+            tmp_dict['name'] = individual.name
+            tmp_dict['sex'] = individual.sex
+            tmp_dict['birt_dt'] = individual.birt_dt
+            tmp_dict['deat_dt'] = individual.deat_dt
+            tmp_dict['age'] = individual.age
+            tmp_dict['child_of_family'] = individual.fam_c
+            tmp_dict['spous_of_family'] = list(individual.fam_s)
+            
+            self.formatted_data['individual'][indi_id] = tmp_dict
+            
+            # figure out which fam_id is the current individual belongs
+            if individual.fam_c != "":
+                self.formatted_data['family'][individual.fam_c]['members'].append({"indi_id": indi_id, "hierarchy": 1})
+            if len(individual.fam_s) != 0:
+                for fam_id in individual.fam_s:
+                   self.formatted_data['family'][fam_id]['members'].append({"indi_id": indi_id, "hierarchy": 0})
+
+        # print(self.formatted_data)
+
     def pretty_print(self):
         """ put everything in a fancy table
             row_fmt for INDI:
@@ -201,15 +246,21 @@ class Gedcom:
             store the mongo client as an instance attr
             return a collection reference for use in user story method
         """
-        indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
-        fam_mg = [f.mongo_data() for f in self.fams.values()]
+        # Todo: When do the refactoring, we will remvoe the following commented lines
+        # indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
+        # fam_mg = [f.mongo_data() for f in self.fams.values()]
         
-        mongo_instance = MongoDB()
+        # mongo_instance = MongoDB()
         
-        entts = mongo_instance.get_collection("entity")
-        entts.insert_many([*indi_mg, *fam_mg])
+        # entts = mongo_instance.get_collection("entity")
+        # entts.insert_many([*indi_mg, *fam_mg])
         
-        return entts
+        # return entts
+        self.format_data_structure()
+        fams = [f for f in self.formatted_data['family'].values()]
+        indis = [i for i in self.formatted_data['individual'].values()]
+        self.mongo_instance.get_collection("family").insert_many(fams)
+        self.mongo_instance.get_collection("individual").insert_many(indis)
 
     def _earlier_deat_dt_in_fam(self, fam_id):
         """ return the smaller(earlier) deat_dt of the given indi_id"""
@@ -343,7 +394,6 @@ class Gedcom:
             Unique Ids
             To make sure all individual IDs should be unique and all family IDs should be unique 
         """
-
         if debug:
             return self.errors['us22']
         else:
@@ -466,12 +516,76 @@ class Gedcom:
             US14: Multiple births <= 5
             <definition of the user story>
         """
+        err_msg_lst = []  # store each group of error message as a tuple
+        
+        cond = [
+            {"$unwind": "$members"},
+            {"$match": {"members.hierarchy": {"$eq": 1}}},
+            {
+                "$lookup":{
+                    "from": "individual",
+                    "localField": "members.indi_id",
+                    "foreignField": "indi_id",
+                    "as": "members_info"
+                }
+            },
+            {"$group": {"_id": "$fam_id", "count": {"$sum": 1}}},
+            {"$match": {"count": {"$gte": 3}}},
+        ]
+        count_of_sibling = self.mongo_instance.get_collection('family').aggregate(cond)
+        
+        for count in count_of_sibling:
+            if count['count'] >= 3:
+                result_of_indis = self.mongo_instance.get_collection('individual').find({"child_of_family": count['_id']})
+                for indi in result_of_indis:
+                    print(indi)
+            break  
+
+        # if debug:
+        #     return err_msg_lst
+        # else:
+        #     for err_msg in err_msg_lst:
+        #         print(err_msg)
 
     def us16_male_last_name(self, debug=False):
-        """ Javer, <time you manipulate the code>
+        """ Javer, <Mar 3, 2019>
             US16: Male last names
-            <definition of the user story>
+            To check each male has the last name within each family
         """
+        err_msg_lst = []  # store each group of error message as a tuple
+        cond = [
+            {
+                "$lookup":{
+                    "from": "individual",
+                    "localField": "members.indi_id",
+                    "foreignField": "indi_id",
+                    "as": "members_info"
+            }
+        }]
+        result_of_docs = self.mongo_instance.get_collection('family').aggregate(cond)
+        
+        for doc in result_of_docs:
+            tmp_last_name = ""
+            diff_male_last_name_with_indi_id = {}
+            for member in doc['members_info']:
+                if member['sex'] == 'M':
+                    if tmp_last_name == "":
+                        tmp_last_name = member['name']['last']
+                        diff_male_last_name_with_indi_id[member['name']['last']] = member['indi_id']
+                        
+                    else:
+                        if member['name']['last'] != tmp_last_name:
+                            if member['name']['last'] not in diff_male_last_name_with_indi_id:
+                                diff_male_last_name_with_indi_id[member['name']['last']] = member['indi_id']
+
+            if len(diff_male_last_name_with_indi_id) > 1:
+                err_msg_lst.append(f"Error for US16: Family ({doc['fam_id']}) contains different male last names: {','.join(diff_male_last_name_with_indi_id.values())}, with values: {','.join(diff_male_last_name_with_indi_id)}")
+
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                print(err_msg)
 
     def us23_unique_name_and_birt(self, debug=False):
         """ Ray, <time you manipulate the code>
@@ -643,29 +757,32 @@ class Warn:
 def main():
     """ Entrance"""
 
+    # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
     gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
     
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
-    mongo_instance.delete_database()
-    gdm.insert_to_mongo()
+    # mongo_instance.drop_collection("family")
+    # mongo_instance.drop_collection("individual")
+    # gdm.insert_to_mongo()
+    # mongo_instance.delete_database()
     
-    """ User Stories for the Spint1 """
+    """ User Stories for the Spint2 """
     # Javer
-    gdm.us01_date_validate()
-    gdm.us22_unique_ids()
+    gdm.us14_multi_birt_less_than_5()
+    # gdm.us16_male_last_name()
     
-    # John
-    gdm.us03_birth_before_death()
-    gdm.us05_marriage_before_death()
+    # # John
+    # gdm.us03_birth_before_death()
+    # gdm.us05_marriage_before_death()
 
-    # Benji
-    gdm.us06_divorce_before_death()
-    gdm.us20_aunts_and_uncle()
+    # # Benji
+    # gdm.us06_divorce_before_death()
+    # gdm.us20_aunts_and_uncle()
 
-    # Ray
-    gdm.us02_birth_before_marriage()
-    gdm.us11_no_bigamy()
+    # # Ray
+    # gdm.us02_birth_before_marriage()
+    # gdm.us11_no_bigamy()
 
     
 
