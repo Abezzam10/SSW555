@@ -24,5 +24,6 @@ def gedcom(gedfile):
     ged.us20_aunts_and_uncle()
     ged.us22_unique_ids()
 
+    ged.us14_multi_birt_less_than_5()
     ged.us16_male_last_name()
 

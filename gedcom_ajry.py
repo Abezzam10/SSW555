@@ -514,11 +514,13 @@ class Gedcom:
     def us14_multi_birt_less_than_5(self, debug=False):
         """ Javer, <time you manipulate the code>
             US14: Multiple births <= 5
-            <definition of the user story>
+            No more than five siblings should be born at the same time within a family
         """
         err_msg_lst = []  # store each group of error message as a tuple
-        
-        cond = [
+        less_than = 5 # using 2 for testing
+
+        # First, using hierarchy to count the number of sibling from a family which number is greater than 5 
+        count_of_sibling_cond = [
             {"$unwind": "$members"},
             {"$match": {"members.hierarchy": {"$eq": 1}}},
             {
@@ -530,22 +532,38 @@ class Gedcom:
                 }
             },
             {"$group": {"_id": "$fam_id", "count": {"$sum": 1}}},
-            {"$match": {"count": {"$gte": 3}}},
+            {"$match": {"count": {"$gte": less_than}}},
         ]
-        count_of_sibling = self.mongo_instance.get_collection('family').aggregate(cond)
+        count_of_sibling = self.mongo_instance.get_collection('family').aggregate(count_of_sibling_cond)
         
         for count in count_of_sibling:
-            if count['count'] >= 3:
-                result_of_indis = self.mongo_instance.get_collection('individual').find({"child_of_family": count['_id']})
-                for indi in result_of_indis:
-                    print(indi)
-            break  
+            if count['count'] >= less_than:
+                # Then, using birt_dt to group and count the individuals whithin a family that have the same birt year-month-day
+                group_and_count_by_date_cond = [
+                    {"$match": {"child_of_family": count['_id']}},
+                    {"$project": {
+                        "birt_dt": {"$substr":["$birt_dt", 0, 10]}, 
+                        "indi_id": 1,
+                        "child_of_family": 1
+                    }},
+                    {"$group": {
+                        "_id": "$birt_dt", 
+                        "count": {"$sum": 1}, 
+                        "indi_ids": {"$push": "$indi_id"},
+                        "fam_id": {"$first": "$child_of_family"}
+                    }},
+                    {"$match": {"count": {"$gte": less_than}}},
+                ]
 
-        # if debug:
-        #     return err_msg_lst
-        # else:
-        #     for err_msg in err_msg_lst:
-        #         print(err_msg)
+                result_of_indis = self.mongo_instance.get_collection('individual').aggregate(group_and_count_by_date_cond)
+                for indi in result_of_indis:
+                    err_msg_lst.append(f"Error for US14: Family ({indi['fam_id']}) contains multi birth greater than {less_than}, indi_id: [{', '.join(indi['indi_ids'])}]")
+
+        if debug:
+            return err_msg_lst
+        else:
+            for err_msg in err_msg_lst:
+                print(err_msg)
 
     def us16_male_last_name(self, debug=False):
         """ Javer, <Mar 3, 2019>
@@ -579,7 +597,7 @@ class Gedcom:
                                 diff_male_last_name_with_indi_id[member['name']['last']] = member['indi_id']
 
             if len(diff_male_last_name_with_indi_id) > 1:
-                err_msg_lst.append(f"Error for US16: Family ({doc['fam_id']}) contains different male last names: {','.join(diff_male_last_name_with_indi_id.values())}, with values: {','.join(diff_male_last_name_with_indi_id)}")
+                err_msg_lst.append(f"Error for US16: Family ({doc['fam_id']}) contains different male last names: {', '.join(diff_male_last_name_with_indi_id.values())}, with values: {','.join(diff_male_last_name_with_indi_id)}")
 
         if debug:
             return err_msg_lst
