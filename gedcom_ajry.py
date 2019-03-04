@@ -154,46 +154,15 @@ class Gedcom:
     def format_data_structure(self):
         """ format the data into db structure
         """
-        for fam_id, family in self.fams.items():
-            tmp_dict = {}
-            tmp_dict['fam_id'] = fam_id
-            tmp_dict['members'] = []
-            tmp_dict['husb_id'] = family.husb_id
-            tmp_dict['wife_id'] = family.wife_id
-            tmp_dict['marr_dt'] = family.marr_dt
-            tmp_dict['div_dt'] = family.div_dt
-            tmp_dict['both_alive'] = None
+        indis = {indi_id: indi.mongo_data() for indi_id, indi in self.indis.items()}  # indi.mongo_data() return a formatted dict
+        fams = {fam_id: fam.mongo_data() for fam_id, fam in self.fams.items()}  # dictionary comprehension. COMPREHENSION FOR ALL!!! LMAO
+        
+        # update the fams[fam_id][both_alive] field
+        for fam in fams.values():
+            fam['both_alive'] = bool(not indis[fam['husb_id']]['deat_dt'] and not indis[fam['wife_id']]['deat_dt'])  # both husb and wife don't have a deat_dt
 
-            if family.husb_id in self.indis and family.wife_id in self.indis:
-
-                if self.indis[family.husb_id]['deat_dt'] == None and self.indis[family.wife_id]['deat_dt'] == None:
-                    tmp_dict['both_alive'] = True
-                else:
-                    tmp_dict['both_alive'] = False
-   
-            self.formatted_data['family'][fam_id] = tmp_dict
-
-        for indi_id, individual in self.indis.items():
-            tmp_dict = {}
-            tmp_dict['indi_id'] = indi_id
-            tmp_dict['name'] = individual.name
-            tmp_dict['sex'] = individual.sex
-            tmp_dict['birt_dt'] = individual.birt_dt
-            tmp_dict['deat_dt'] = individual.deat_dt
-            tmp_dict['age'] = individual.age
-            tmp_dict['child_of_family'] = individual.fam_c
-            tmp_dict['spous_of_family'] = list(individual.fam_s)
-            
-            self.formatted_data['individual'][indi_id] = tmp_dict
-            
-            # figure out which fam_id is the current individual belongs
-            if individual.fam_c != "":
-                self.formatted_data['family'][individual.fam_c]['members'].append({"indi_id": indi_id, "hierarchy": 1})
-            if len(individual.fam_s) != 0:
-                for fam_id in individual.fam_s:
-                   self.formatted_data['family'][fam_id]['members'].append({"indi_id": indi_id, "hierarchy": 0})
-
-        # print(self.formatted_data)
+        self.formatted_data['family'] = fams
+        self.formatted_data['individual'] = indis
 
     def pretty_print(self):
         """ put everything in a fancy table
@@ -246,7 +215,7 @@ class Gedcom:
             store the mongo client as an instance attr
             return a collection reference for use in user story method
         """
-        # Todo: When do the refactoring, we will remvoe the following commented lines
+        # TODO: When do the refactoring, we will remvoe the following commented lines
         # indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
         # fam_mg = [f.mongo_data() for f in self.fams.values()]
         
@@ -668,15 +637,14 @@ class Individual(Entity):
     def mongo_data(self):
         """ return a dictionary with mongodb data for database"""
         return {
-            'id': self.indi_id,
-            'cat': 'indi',  # only used for mongodb to distinguish entity catagory
+            'idni_id': self.indi_id,
             'name': self.name,
             'sex': self.sex,
             'birt_dt': self.birt_dt,
             'deat_dt': self.deat_dt,
             'age': self.age,
-            'fam_c': self.fam_c,
-            'fam_s': list(self.fam_s)
+            'child_of_family': self.fam_c,
+            'spous_of_family': list(self.fam_s)
         }
 
     def pp_row(self):
@@ -703,14 +671,16 @@ class Family(Entity):
     def mongo_data(self):
         """ return a dictionary with mongodb data for database"""
         return {
-            'id': self.fam_id,
-            'cat': 'fam',
-            'marr_dt': self.marr_dt,
-            'div_dt': self.div_dt,
+            'fam_id': fam_id,
+            'members':
+                [{'indi_id': indi_id, 'hierarchy': 0} for indi_id in (self.husb_id, self.wife_id) if indi_id] + \
+                [{'indi_id': indi_id, 'hierarchy': 1} for indi_id in self.chil_id if indi_id],  # put an if statement to ensure no '' is inside
             'husb_id': self.husb_id,
             'wife_id': self.wife_id,
-            'chil_id': list(self.chil_id)
-        }
+            'marr_dt': self.marr_dt,
+            'div_dt': self.div_dt,
+            'both_alive': None
+            }
 
     def pp_row(self):
         """ return a data sequence:
@@ -751,7 +721,6 @@ class Error:
         for name_id, fam_info in err_msg_dct.items():
             first, last, indi_id = name_id.split('|')
             print(Error.header.format(us_id) + 'The individual {0}, {1} {2}, is in marriage {3} at the same time.'.format(indi_id, first, last, ', '.join(fam_info)))
-
 
 class Warn:
     """ A class used to bundle up all of the warning message
