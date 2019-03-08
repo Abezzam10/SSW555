@@ -12,25 +12,31 @@ class test_us11(unittest.TestCase):
     def test_no_bigamy(self):
         """ None of the spouses are involved in multiple marriages"""
         ged = Gedcom('./GEDCOM_files/us11/test04.ged')
-        self.assertEqual(ged.us11_no_bigamy(debug=True), {})
+        self.assertEqual(ged.us11_no_bigamy(debug=True), [])
 
     def test_prev_marr_end_with_div(self):
         """ Previous marriage ends with divorce"""
         ged = Gedcom('./GEDCOM_files/us11/us11_prev_div.ged')
-        expected = {'Fake|Arshel|@I1@': {'@F1@', '@F2@'}}
-        self.assertEqual(dict(ged.us11_no_bigamy(debug=True)), expected)
+        expected = [
+            ('@I1@', 'Fake Arshel', '@F1@ and @F2@')
+        ]
+        self.assertEqual(ged.us11_no_bigamy(debug=True), expected)
 
     def test_prev_marr_end_indi_dies(self):
         """ Previous marriage ends with the current person's death"""
         ged = Gedcom('./GEDCOM_files/us11/us11_prev_indi_dies.ged')
-        expected = {'Fake|Arshel|@I1@': {'@F1@', '@F2@'}}
-        self.assertEqual(dict(ged.us11_no_bigamy(debug=True)), expected)
+        expected = [
+            ('@I1@', 'Fake Arshel', '@F1@ and @F2@')
+        ]
+        self.assertEqual(ged.us11_no_bigamy(debug=True), expected)
 
     def test_prev_marr_end_partner_dies(self):
         """ Previous marriage ends with the partner's death"""
         ged = Gedcom('./GEDCOM_files/us11/us11_prev_partner_dies.ged')
-        expected = {'Fake|Arshel|@I1@': {'@F1@', '@F2@'}}
-        self.assertEqual(dict(ged.us11_no_bigamy(debug=True)), expected)
+        expected = [
+            ('@I1@', 'Fake Arshel', '@F1@ and @F2@')
+        ]
+        self.assertEqual(ged.us11_no_bigamy(debug=True), expected)
 
 if __name__ == '__main__':
     unittest.main(exit=False, verbosity=2)

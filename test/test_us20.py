@@ -13,9 +13,9 @@ class test_us20(unittest.TestCase):
         """ test case nephew marries with his aunt"""
         expected = [
             (
-                '@I4@', {'first': 'Ably', 'last': 'Pedersen'},
-                '@I10@', {'first': 'Cam', 'last': 'Pedersen'},
-                '@I7@', {'first': 'Karla', 'last': 'Pedersen'}
+                'Ably Pedersen', '@I4@',
+                'Cam Pedersen', '@I10@',
+                'Karla Pedersen', '@I7@',
             )
         ]
         ged = Gedcom('./GEDCOM_files/us20/us20_nephew_marr_aunt.ged')
@@ -25,9 +25,9 @@ class test_us20(unittest.TestCase):
         """ test case niece marries with her uncle"""
         expected = [
             (
-                '@I4@', {'first': 'Ably', 'last': 'Pedersen'},
-                '@I11@', {'first': 'Molly', 'last': 'Pedersen'},
-                '@I6@', {'first': 'Gisilbert', 'last': 'Pedersen'}
+                'Ably Pedersen', '@I4@',
+                'Molly Pedersen', '@I11@',
+                'Gisilbert Pedersen', '@I6@',
             )
         ] 
         ged = Gedcom('./GEDCOM_files/us20/us20_niece_marr_uncle.ged')
