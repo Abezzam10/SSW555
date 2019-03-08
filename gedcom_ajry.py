@@ -338,7 +338,7 @@ class Gedcom:
                         bigamy_fam.update((prev_fam_id, fam_id))
                 
                 if bigamy_fam:
-                    fmt_str_bigamy = ' and '.join(bigamy_fam)
+                    fmt_str_bigamy = ' and '.join(sorted(bigamy_fam))
                     self.msg_collections['err']['msg_container']['US11']['tokens'].append(
                         (
                             indi.indi_id,
