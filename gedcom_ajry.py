@@ -2,15 +2,10 @@
 
 import os
 import re
-import json
-import unittest
-import sys
-
 from tabulate import tabulate
 from datetime import datetime
 from collections import defaultdict
 from mongo_db import MongoDB
-      
 
 class Gedcom:
     """ a class used to read the given GEDCOM file and build the database based on it
@@ -35,13 +30,49 @@ class Gedcom:
         self.fams = {}
         self.path_validate()
 
-
-        self.errors = {
-                        'us22': []
-                    }  # this dictionary is used to store the error/anomally that are supposed to find during the interpretation of the GEDCOM file
-
         self.mongo_instance = MongoDB()
         self.formatted_data = {"family":{}, "individual":{}}    # formatted data into db's structure
+
+        # this dictionary is used to store the error/anomally messages
+        self.msg_collections = {
+
+            'err': {
+                'header': 'Error {}: ',  # this is changable when the error line user story add in
+                'msg_container': {  # key: user story ID, value: fmt_str, tokens.
+
+                    'US06': {
+                        'fmt_msg': '{}, the {} of {}, died before divorce. Death date is {}. Divorce date is {}.',
+                        'tokens': []  # tokens[i] = (name, 'wife'|'husband', fam_id, deat_dt, div_dt)
+                    },
+
+                    'US22': {
+                        'fmt_msg': 'The ID of {} {} was existed already. Entity omitted during the build',
+                        'tokens': []  # tokens[i] = ('INDI'|'FAM', entt_id)
+                    },
+
+                    'US11': {
+                        'fmt_msg': 'The individual {0}, {1}, is in marriage {2} at the same time.',
+                        'tokens': []  # tokens[i] = (indi_id, name, str_of_all_bigamy)
+                    },
+
+                    'US07': {
+                        'fmt_msg': 'The individual {}, {} is over 150 years old, the person is {} years old.',
+                        'tokens': []  # tokens[i] = (indi_id, name, age)
+                    },
+                }
+            },
+
+            'anomaly': {
+                'header': 'Anomaly {}: ',
+                'msg_container': {
+
+                    'US20': {
+                        'fmt_msg': 'The child of {0}({1}), {2}({3}), is married with the sibling of {0}, {4}({5})',
+                        'tokens': [] # tokens[i] = (indi_nm, indi_id, child_nm, child_id, sibling_nm, sibling_id)
+                    }
+                }
+            }
+        }
 
         self.data_parser()
         self.lst_to_obj()
@@ -51,7 +82,7 @@ class Gedcom:
         """ If a invalid path is given, raise an OSError"""
         if not os.path.isfile(os.path.abspath(self.path)):
             raise OSError(f'Error: {self.path} is not a valid path!')
-    
+
     def data_parser(self):
         """ open the file from given path and print the analysis of data"""
         try:
@@ -71,7 +102,7 @@ class Gedcom:
     def _line_processor(self, line):
         """ process each line read from the file."""
 
-        fields = line.split(' ', 2)  
+        fields = line.split(' ', 2)
         level = fields[0]
         res = {'level': level, 'tag': None, 'arg': None}
 
@@ -81,11 +112,11 @@ class Gedcom:
             for ind, item in enumerate(fields[1: ], start=1):
                 if item in Gedcom.level_tags[level] and ind == Gedcom.level_tags[level][item]:  # valid tag in valid position
                     res['tag'] = item
-                elif item in Gedcom.level_tags[level] and ind != Gedcom.level_tags[level][item]: # valid tag in invalid poition                    
+                elif item in Gedcom.level_tags[level] and ind != Gedcom.level_tags[level][item]: # valid tag in invalid poition
                     raise ValueError('Error: Tag not in correct position.')
                 else:  # argument(s)
                     tail.append(item)
-            
+
             if not res['tag']:  # no tag found, len(tail) == 2
                 raise ValueError('Error: No tag is found.')
 
@@ -120,14 +151,14 @@ class Gedcom:
 
             if lvl == '0' and tag in cat_pool:  # find a new entity
                 if curr_entity:  # update the current entity in data containers
-                    
+
                     if curr_id in cat_cont[curr_cat]:  # NOTE: check for US22
-                        self.errors['us22'].append((curr_id, curr_cat))
+                        self.msg_collections['err']['msg_container']['US22']['tokens'].append((curr_id, curr_cat))
                     else:
                         cat_cont[curr_cat][curr_id] = curr_entity
 
                     curr_entity, curr_cat, curr_id = None, None, None  # *NOTE* can be deleted maybe?
-                
+
                 # when tag in ('INDI', 'FAM'), arg is the id of this entity
                 curr_entity, curr_cat, curr_id = cat_pool[tag](arg), tag, arg
 
@@ -156,7 +187,7 @@ class Gedcom:
         """
         indis = {indi_id: indi.mongo_data() for indi_id, indi in self.indis.items()}  # indi.mongo_data() return a formatted dict
         fams = {fam_id: fam.mongo_data() for fam_id, fam in self.fams.items()}  # dictionary comprehension. COMPREHENSION FOR ALL!!! LMAO
-        
+
         # update the fams[fam_id][both_alive] field
         for fam in fams.values():
             fam['both_alive'] = bool(not indis[fam['husb_id']]['deat_dt'] and not indis[fam['wife_id']]['deat_dt'])  # both husb and wife don't have a deat_dt
@@ -186,7 +217,7 @@ class Gedcom:
             id_, marr, div, husb_id, wife_id, chil_ids = fam.pp_row()
             husb_nm = ', '.join([self.indis[husb_id].name['last'], self.indis[husb_id].name['first']])
             wife_nm = ', '.join([self.indis[wife_id].name['last'], self.indis[wife_id].name['first']])
-            fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))  
+            fams_rows.append((id_, marr, div, husb_id, husb_nm, wife_id, wife_nm, chil_ids))
 
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))  
 
@@ -218,12 +249,12 @@ class Gedcom:
         # TODO: When do the refactoring, we will remvoe the following commented lines
         # indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
         # fam_mg = [f.mongo_data() for f in self.fams.values()]
-        
+
         # mongo_instance = MongoDB()
-        
+
         # entts = mongo_instance.get_collection("entity")
         # entts.insert_many([*indi_mg, *fam_mg])
-        
+
         # return entts
         self.format_data_structure()
         fams = [f for f in self.formatted_data['family'].values()]
@@ -240,6 +271,16 @@ class Gedcom:
             return min(husb.deat_dt, wife.deat_dt)  # return the smaller(earlier) datetime
         else:
             return husb.deat_dt or wife.deat_dt  # 3 possible return values: husb.deat_dt, wife.deat_dt, None
+
+    def msg_print(self):
+        """ print all error and anomaly messages"""
+        for cat in 'err', 'anomaly':  # hardcode the order
+            for us_id in sorted(self.msg_collections[cat]['msg_container']):  # sort the user story id
+                for token in self.msg_collections[cat]['msg_container'][us_id]['tokens']:
+                    print(
+                        self.msg_collections[cat]['header'].format(us_id) +
+                        self.msg_collections[cat]['msg_container'][us_id]['fmt_msg'].format(*token)
+                    )
 
     """ ----------------------------------------- """
     """                                           """
@@ -263,7 +304,7 @@ class Gedcom:
             
                 if temp2 == fam.fam_id: 
                     if temp > fam.marr_dt: 
-                        print("Error US02: Marriage Date is greater than Birth Date for Family: ",fam.fam_id)
+                        print("Error US02: Marriage Date is greater than Birth Date for Family: ", fam.fam_id)
                         return False
                     else: 
                         flag = True
@@ -277,33 +318,16 @@ class Gedcom:
             :: refactored at Feb 27th by Benji
         """
         
-        #flag = False
-        #for indi, fam_s in self.indis.items():
-        #    dummy = ""
-        #    temp = ""
-        #    for temp in fam_s.fam_s:
-        #        break
-        #    for a in fam_s.fam_s: 
-        #        dummy = dummy + a
-        #    for fid, fam in self.fams.items(): 
-        #        if fam.fam_id == temp: 
-        #            if sys.getsizeof(dummy) > 53 and fam.div_dt != None:
-        #                print("Error US11: Cannot have multiple spouses!")
-        #                return False
-        #            else: 
-        #                flag = True
-        #
-        #return flag
-
-        err_msg_dct = defaultdict(set) 
-        
         for indi in self.indis.values():
             if len(indi.fam_s) > 1:  # multi-marriage
-       
+
+                bigamy_fam = set()
+
                 marr_range_tups = []  # [(fam_id, marr_start, marr_end), ...]
                 for fam in [self.fams[fam_id] for fam_id in indi.fam_s]:
                     # for each marriage, it starts at marr_dt, it ends at either divorce or death of one of the spouse
                     marr_range_tups.append((fam.fam_id, fam.marr_dt, fam.div_dt or self._earlier_deat_dt_in_fam(fam.fam_id)))
+
                 prev_fam_id, prev_start, prev_end = None, None, None
                 for fam_id, start, end in sorted(marr_range_tups, key=lambda x: x[1]):
                     if prev_fam_id is None:
@@ -311,12 +335,20 @@ class Gedcom:
                         continue
 
                     if prev_end is None or (prev_end is not None and prev_end > start):
-                        err_msg_dct['|'.join((indi.name['first'], indi.name['last'], indi.indi_id))].update((prev_fam_id, fam_id))
+                        bigamy_fam.update((prev_fam_id, fam_id))
+                
+                if bigamy_fam:
+                    fmt_str_bigamy = ' and '.join(bigamy_fam)
+                    self.msg_collections['err']['msg_container']['US11']['tokens'].append(
+                        (
+                            indi.indi_id,
+                            ' '.join((indi.name['first'], indi.name['last'])),
+                            fmt_str_bigamy
+                        )
+                    )
                         
         if debug:
-            return err_msg_dct
-        else:
-            Error.err11(err_msg_dct)
+            return self.msg_collections['err']['msg_container']['US11']['tokens']
 
     def us01_date_validate(self):
         """ Javer, Feb 19, 2019
@@ -364,10 +396,7 @@ class Gedcom:
             To make sure all individual IDs should be unique and all family IDs should be unique 
         """
         if debug:
-            return self.errors['us22']
-        else:
-            for err_msg in self.errors['us22']:
-                Error.err22(*err_msg)          
+            return self.msg_collections['err']['msg_container']['US22']['tokens']       
 
     def us05_marriage_before_death(self):
         """ John February 23, 2018
@@ -401,9 +430,9 @@ class Gedcom:
             This method checks if the birth date comes before the death date or not. 
             Method prints an error if anomalies are found.
         """
-        error_message_list=[]
+        error_message_list = []
         for people in self.indis.values():
-            if people.deat_dt == None:
+            if people.deat_dt is None:
                 continue
             elif people.birt_dt > people.deat_dt:
                 print("Error US03: death date before birth date for individual with id : "+people.indi_id)
@@ -422,16 +451,29 @@ class Gedcom:
                 husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]
 
                 if husb.deat_dt and husb.deat_dt < fam.div_dt:
-                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), husb.indi_id, 'husband', husb.name, husb.deat_dt.strftime('%m/%d/%y')))
+                    self.msg_collections['err']['msg_container']['US06']['tokens'].append(
+                        (
+                            ' '.join((husb.name['first'], husb.name['last'])),
+                            'husband',
+                            fam.fam_id,
+                            husb.deat_dt.strftime('%m/%d/%y'),
+                            fam.div_dt.strftime('%m/%d/%y')
+                        )
+                    )
 
                 if wife.deat_dt and wife.deat_dt < fam.div_dt:
-                    err_msg_lst.append((fam.fam_id, fam.div_dt.strftime('%m/%d/%y'), wife.indi_id, 'wife', wife.name, wife.deat_dt.strftime('%m/%d/%y')))
+                    self.msg_collections['err']['msg_container']['US06']['tokens'].append(
+                        (
+                            ' '.join((wife.name['first'], wife.name['last'])),
+                            'wife',
+                            fam.fam_id,
+                            wife.deat_dt.strftime('%m/%d/%y'),
+                            fam.div_dt.strftime('%m/%d/%y')
+                        )
+                    )
 
         if debug:
-            return err_msg_lst
-        else:
-            for err_msg in err_msg_lst:
-                Error.err06(*err_msg)
+            return self.msg_collections['err']['msg_container']['US06']['tokens']
 
     def us20_aunts_and_uncle(self, debug=False):
         """ Benji, Feb 22th, 2019
@@ -448,13 +490,19 @@ class Gedcom:
             for sibling in siblings:
                 for child in children:
                     if sibling.fam_s & child.fam_s:  # as fam_s is a set, python has this intersection shortcut, DOPE
-                        err_msg_lst.append((indi.indi_id, indi.name, child.indi_id, child.name, sibling.indi_id, sibling.name))
+                        self.msg_collections['anomaly']['msg_container']['US20']['tokens'].append(
+                            (
+                                ' '.join((indi.name['first'], indi.name['last'])),
+                                indi.indi_id,
+                                ' '.join((child.name['first'], child.name['last'])),
+                                child.indi_id,
+                                ' '.join((sibling.name['first'], sibling.name['last'])),
+                                sibling.indi_id,
+                            )
+                        )
 
         if debug:
-            return err_msg_lst
-        else:
-            for err_msg in err_msg_lst:
-                Warn.warn20(*err_msg)
+            return self.msg_collections['anomaly']['msg_container']['US20']['tokens']
 
     def us04_marr_b4_div(self, debug=False):
         """ John, <time you manipulate the code>
@@ -463,11 +511,25 @@ class Gedcom:
         """
 
     def us07_less_than_150_yrs(self, debug=False):
-        """ Benji, <time you manipulate the code>
+        """ Benji, March 4th, 2019
             US07: Less than 150 years old
-            <definition of the user story>
+            Death should be less than 150 years after birth for dead people, and 
+            current date should be less than 150 years after birth for all living people
         """
-    
+        err_msg_lst = []
+        for indi in self.indis.values():
+            if indi.age >= 150:  # age >= 150
+                self.msg_collections['err']['msg_container']['US07']['tokens'].append(
+                    (
+                        indi.indi_id,
+                        ' '.join((indi.name['first'], indi.name['last'])),
+                        indi.age
+                    )
+                )
+
+        if debug:
+            return self.msg_collections['err']['msg_container']['US07']['tokens']
+
     def us08_birt_b4_marr_of_par(self, debug=False):
         """ Ray, <time you manipulate the code>
             US08: Birth before marriage of parents
@@ -671,7 +733,7 @@ class Family(Entity):
     def mongo_data(self):
         """ return a dictionary with mongodb data for database"""
         return {
-            'fam_id': fam_id,
+            'fam_id': self.fam_id,
             'members':
                 [{'indi_id': indi_id, 'hierarchy': 0} for indi_id in (self.husb_id, self.wife_id) if indi_id] + \
                 [{'indi_id': indi_id, 'hierarchy': 1} for indi_id in self.chil_id if indi_id],  # put an if statement to ensure no '' is inside
@@ -688,58 +750,6 @@ class Family(Entity):
         """
         return self.fam_id, self.marr_dt.strftime('%Y-%m-%d'), self.div_dt.strftime('%Y-%m-%d') if self.div_dt else 'NA', \
             self.husb_id, self.wife_id, ', '.join(self.chil_id) if self.chil_id else 'NA'
-
-class Error:
-    """ A class used to bundle up all of the error message
-        the method naming pattern is err[us_ID](*args, *kwargs)
-    """
-    header = 'Error {}: '
-
-    @classmethod
-    def err06(cls, fam_id='', div_dt='', spouse_id='', spouse='', spouse_name='', spouse_deat_dt='', VERBOSE=False):
-        """ return error message for User Stroy 06"""
-        us_id = 'US06'
-        if VERBOSE:
-            print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.' + \
-                f'\n\t\t\tDeath date of {spouse_name}: {spouse_deat_dt}' + f'\n\t\t\tDivorce date of family {fam_id}: {div_dt}')
-        print(cls.header.format(us_id) + f'The {spouse} of family {fam_id}, {spouse_name}({spouse_id}), died before divorce.')
-
-    @classmethod
-    def err22(cls, entt_id, entt_cat):
-        """ return error message for User Stroy 22"""
-        us_id = 'US22'
-        cat = 'individual' if entt_cat == 'INDI' else 'family' 
-        print(cls.header.format(us_id) + f'The ID of {cat} {entt_id} was existed already. Entity omitted during the build')
-
-    @classmethod
-    def err11(cls, err_msg_dct):
-        """ print error message for User Story 11
-            name_id: 'first|last|id'
-            fam_info: set of fam_id
-        """
-        us_id = 'US11'
-        for name_id, fam_info in err_msg_dct.items():
-            first, last, indi_id = name_id.split('|')
-            print(Error.header.format(us_id) + 'The individual {0}, {1} {2}, is in marriage {3} at the same time.'.format(indi_id, first, last, ', '.join(fam_info)))
-
-class Warn:
-    """ A class used to bundle up all of the warning message
-        the method naming pattern is warn[us_ID](*args, *kwargs)
-    """
-    header = 'Warning {}: '
-
-    @classmethod
-    def warn20(cls, indi_id, indi_name, child_id, child_name, sibling_id, sibling_name):
-        """ return warning message for User Story 20"""
-        us_id = 'US20'
-        indi_nm = ' '.join([indi_name['first'], indi_name['last']])  
-        child_nm = ' '.join([child_name['first'], child_name['last']])  
-        sibling_nm = ' '.join([sibling_name['first'], sibling_name['last']])
-
-        print(
-            cls.header.format(us_id) + \
-            f'The child of {indi_nm}({indi_id}), {child_nm}({child_id}), is married with the sibling of {indi_nm}({indi_id}), {sibling_nm}({sibling_id})'
-            )
 
 def main():
     """ Entrance"""
