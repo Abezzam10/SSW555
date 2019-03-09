@@ -28,8 +28,8 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 
 1. [Installation & PyPI](#1-installation--pypi)
 2. [Test Strategy](#2-workflow-of-version-control)
-3. [Project Overview Link](Project_overview.md)
-4. [Coding Style Guideline](coding_style_specification.md)
+3. [Project Overview Link](doc/Project_overview.md)
+4. [Coding Style Guideline](doc/coding_style_specification.md)
 
 ## 1 Installation & PyPI
 
@@ -55,8 +55,8 @@ Note that it's required to use the dot(`.`) to represent the current directory i
 
 ***We are using a MVC architecture for our project.***
 
-To keep the README nice and clean, we have the *project overview* and *random ideas list* wrapped up in another [file](Project_overview.md). Feel free to check it out!
+To keep the README nice and clean, we have the *project overview* and *random ideas list* wrapped up in another [file](doc/Project_overview.md). Feel free to check it out!
 
 ## 4 Coding Style Specification
 
-Please see the [file](coding_style_specification.md) for the naming pattern suggestions.
+Please see the [file](doc/coding_style_specification.md) for the naming pattern suggestions.
