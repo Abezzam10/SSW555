@@ -756,7 +756,7 @@ def main():
 
     # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
     gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
-    
+
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
     # mongo_instance.drop_collection("family")
