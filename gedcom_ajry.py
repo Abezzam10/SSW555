@@ -68,6 +68,11 @@ class Gedcom:
                     'US05': {
                         'fmt_msg': 'Death before marriage of {}, {} with individual id : {} and family id: {}',
                         'tokens': []   #tokens[i] =(husband/wife, name, indi_id, fam_id)
+                    },
+
+                    'US04': {
+                        'fmt_msg': 'Divorce date before marriage date of family with id : {}',
+                        'tokens': []   #tokens[i] = (fam_id)
                     }
                 }
             },
@@ -544,10 +549,19 @@ class Gedcom:
             return self.msg_collections['anomaly']['msg_container']['US20']['tokens']
 
     def us04_marr_b4_div(self, debug=False):
-        """ John, <time you manipulate the code>
+        """ John, March 20th, 2019
             US04: Marriage before divorce
-            <definition of the user story>
+            Marriage should occur before divorce of spouses, and divorce can only occur after marriage
         """
+        for fam in self.fams.values():
+            if(fam.marr_dt>fam.div_dt):
+                self.msg_collections['anomaly']['msg_container']['US04']['tokens'].append(
+                            (
+                                fam.fam_id
+                            )
+                        )
+        if debug:
+            return self.msg_collections['anomaly']['msg_container']['US04']['tokens']
 
     def us07_less_than_150_yrs(self, debug=False):
         """ Benji, March 4th, 2019
