@@ -59,6 +59,16 @@ class Gedcom:
                         'fmt_msg': 'The individual {}, {} is over 150 years old, the person is {} years old.',
                         'tokens': []  # tokens[i] = (indi_id, name, age)
                     },
+
+                    'US03': {
+                        'fmt_msg': 'Death date before birth date for individual, {} with id : {}',
+                        'tokens': []   #tokens[i] = (name, indi_id)
+                    },
+
+                    'US05': {
+                        'fmt_msg': 'Death before marriage of {}, {} with individual id : {} and family id: {}',
+                        'tokens': []   #tokens[i] =(husband/wife, name, indi_id, fam_id)
+                    }
                 }
             },
 
@@ -398,46 +408,75 @@ class Gedcom:
         if debug:
             return self.msg_collections['err']['msg_container']['US22']['tokens']       
 
-    def us05_marriage_before_death(self):
+    def us05_marriage_before_death(self, debug=False):
         """ John February 23, 2018
             US05: Marriage Before Death
             This method checks if the marriage date is before the husband's or wifes's death date or not.
             Method prints an error if anomalies are found.
         """
-        error_message_list = []
+#        error_message_list = []
         
         for fam in self.fams.values():
             for indi in self.indis.values():
                 
                 if fam.husb_id == indi.indi_id:
                     husb_dt = indi.deat_dt
+                    husb_name = ' '.join((indi.name['first'], indi.name['last']))
+                    husb_id = indi.indi_id
+
                 if fam.wife_id == indi.indi_id:
                     wife_dt = indi.deat_dt
-            
+                    wife_name = ' '.join((indi.name['first'], indi.name['last']))
+                    wife_id = indi.indi_id
+
             if husb_dt is not None and fam.marr_dt > husb_dt:
-                print("Error US05: death before marriage of husband with id : ", fam.husb_id)
-                error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
+                self.msg_collections['err']['msg_container']['US05']['tokens'].append(
+                    (
+                        'husband',
+                        husb_name,
+                        husb_id,
+                        fam.fam_id
+                    )
+                )
+#                print("Error US05: death before marriage of husband with id : ", fam.husb_id)
+#                error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
             
             if wife_dt is not None and fam.marr_dt > wife_dt:
-                print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
-                error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
-        
-        return error_message_list
+                self.msg_collections['err']['msg_container']['US05']['tokens'].append(
+                    (
+                        'wife',
+                        wife_name,
+                        wife_id,
+                        fam.fam_id
+                    )
+                )
+#                print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
+#                error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
+                
+        if debug:
+            return self.msg_collections['err']['msg_container']['US05']['tokens']
 
-    def us03_birth_before_death(self):
+    def us03_birth_before_death(self, debug=False):
         """ John February 18th, 2018
             US03: Birth before Death
             This method checks if the birth date comes before the death date or not. 
             Method prints an error if anomalies are found.
         """
-        error_message_list = []
+#        error_message_list = []
         for people in self.indis.values():
             if people.deat_dt is None:
                 continue
             elif people.birt_dt > people.deat_dt:
-                print("Error US03: death date before birth date for individual with id : "+people.indi_id)
-                error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
-        return error_message_list
+                self.msg_collections['err']['msg_container']['US03']['tokens'].append(
+                    (
+                        ' '.join((people.name['first'], people.name['last'])),
+                        people.indi_id
+                    )
+                )
+ #               print("Error US03: death date before birth date for individual with id : "+people.indi_id)
+ #               error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
+        if debug:
+            return self.msg_collections['err']['msg_container']['US03']['tokens']
 
     def us06_divorce_before_death(self, debug=False):
         """ Benji, Feb 21st, 2019
