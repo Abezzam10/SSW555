@@ -555,13 +555,13 @@ class Gedcom:
         """
         for fam in self.fams.values():
             if(fam.marr_dt>fam.div_dt):
-                self.msg_collections['anomaly']['msg_container']['US04']['tokens'].append(
+                self.msg_collections['err']['msg_container']['US04']['tokens'].append(
                             (
                                 fam.fam_id
                             )
                         )
         if debug:
-            return self.msg_collections['anomaly']['msg_container']['US04']['tokens']
+            return self.msg_collections['err']['msg_container']['US04']['tokens']
 
     def us07_less_than_150_yrs(self, debug=False):
         """ Benji, March 4th, 2019
