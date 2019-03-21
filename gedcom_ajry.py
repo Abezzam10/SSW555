@@ -559,7 +559,9 @@ class Gedcom:
             Marriage should occur before divorce of spouses, and divorce can only occur after marriage
         """
         for fam in self.fams.values():
-            if(fam.marr_dt>fam.div_dt):
+            if (fam.div_dt==None):
+                continue
+            elif(fam.marr_dt>fam.div_dt):
                 self.msg_collections['err']['msg_container']['US04']['tokens'].append(
                             (
                                 fam.fam_id
@@ -611,7 +613,7 @@ class Gedcom:
             siblings = self._find_siblings(indi)
             for i in range(len(siblings)):
                 for j in range(i+1,len(siblings)):
-                    if(abs((siblings[i].birt_dt-siblings[j].birt_dt).days) < 274 and abs((siblings[i].birt_dt-siblings[j].birt_dt).days) > 2):
+                    if(abs((siblings[i].birt_dt-siblings[j].birt_dt).days) < 274 and abs((siblings[i].birt_dt-siblings[j].birt_dt).days) > 1):
                         self.msg_collections['anomaly']['msg_container']['US13']['tokens'].append(
                             (
                                 ' '.join((siblings[i].name['first'], siblings[i].name['last'])),
@@ -838,7 +840,7 @@ def main():
 
     # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
     # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
-    gdm = Gedcom('./GEDCOM_files/us13/us13_within9months.ged')
+    gdm = Gedcom('./GEDCOM_files/us13/us13_within2days.ged')
     # keep the three following lines for the Mongo, we may use this later.
     # mongo_instance = MongoDB()
     # mongo_instance.drop_collection("family")
