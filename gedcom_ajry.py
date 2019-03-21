@@ -84,6 +84,11 @@ class Gedcom:
                     'US20': {
                         'fmt_msg': 'The child of {0}({1}), {2}({3}), is married with the sibling of {0}, {4}({5})',
                         'tokens': [] # tokens[i] = (indi_nm, indi_id, child_nm, child_id, sibling_nm, sibling_id)
+                    },
+
+                    'US13': {
+                        'fmt_msg': '{} with id: {} and {} with id : {} are siblings and their birth dates are {} days apart.',
+                        'tokens': []     #tokens[i] = (sibling1_name, sibling1_id, sibling2_name, sibling2_id, difference of birth date in days)
                     }
                 }
             }
@@ -590,10 +595,34 @@ class Gedcom:
         """
 
     def us13_sibling_spacing(self, debug=False):
-        """ John, <time you manipulate the code>
+        """ John, 20th March, 2019
             US13: Siblings spacing
-            <definition of the user story>
+            Birth dates of siblings should be more than 8 months apart or less than 2 days apart
+             (twins may be born one day apart, e.g. 11:59 PM and 12:02 AM the following calendar day)
         """
+        siblings = []
+        for indi in self.indis.values():
+            flag = False
+            for tuple in self.msg_collections['anomaly']['msg_container']['US13']['tokens']:
+                if (indi.indi_id == tuple[1] or indi.indi_id == tuple[3]):
+                    flag = True
+            if flag:
+                continue
+            siblings = self._find_siblings(indi)
+            for i in range(len(siblings)):
+                for j in range(i+1,len(siblings)):
+                    if(abs((siblings[i].birt_dt-siblings[j].birt_dt).days) < 274 and abs((siblings[i].birt_dt-siblings[j].birt_dt).days) > 2):
+                        self.msg_collections['anomaly']['msg_container']['US13']['tokens'].append(
+                            (
+                                ' '.join((siblings[i].name['first'], siblings[i].name['last'])),
+                                siblings[i].indi_id,
+                                ' '.join((siblings[j].name['first'], siblings[j].name['last'])),
+                                siblings[j].indi_id,
+                                abs((siblings[i].birt_dt-siblings[j].birt_dt).days)
+                            )
+                        )
+        if debug:
+            return self.msg_collections['anomaly']['msg_container']['US13']['tokens']            
 
     def us14_multi_birt_less_than_5(self, debug=False):
         """ Javer, <time you manipulate the code>
@@ -808,10 +837,10 @@ def main():
     """ Entrance"""
 
     # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
-    gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
-    
+    # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
+    gdm = Gedcom('./GEDCOM_files/us13/us13_within9months.ged')
     # keep the three following lines for the Mongo, we may use this later.
-    mongo_instance = MongoDB()
+    # mongo_instance = MongoDB()
     # mongo_instance.drop_collection("family")
     # mongo_instance.drop_collection("individual")
     # gdm.insert_to_mongo()
@@ -819,7 +848,7 @@ def main():
     
     """ User Stories for the Spint2 """
     # Javer
-    gdm.us14_multi_birt_less_than_5()
+    # gdm.us14_multi_birt_less_than_5()
     # gdm.us16_male_last_name()
     
     # # John
@@ -833,6 +862,9 @@ def main():
     # # Ray
     # gdm.us02_birth_before_marriage()
     # gdm.us11_no_bigamy()
+
+    gdm.us13_sibling_spacing()
+    gdm.msg_print()
 
     
 
