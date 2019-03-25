@@ -27,3 +27,7 @@ def gedcom(gedfile):
     ged.us14_multi_birt_less_than_5()
     ged.us16_male_last_name()
 
+    ged.us07_less_than_150_yrs()
+    ged.us26_corrspnding_entries()
+
+    ged.msg_print()

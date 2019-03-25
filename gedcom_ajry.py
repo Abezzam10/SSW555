@@ -59,6 +59,11 @@ class Gedcom:
                         'fmt_msg': 'The individual {}, {} is over 150 years old, the person is {} years old.',
                         'tokens': []  # tokens[i] = (indi_id, name, age)
                     },
+
+                    'US26': {
+                        'fmt_msg': 'Unmatched entry found: {} {} not found in {}.',
+                        'tokens': [] # tokens[i] = ('individual'|'family', list of unmatched entries, 'family'|'inidividual' + 'data')
+                    },
                 }
             },
 
@@ -69,7 +74,7 @@ class Gedcom:
                     'US20': {
                         'fmt_msg': 'The child of {0}({1}), {2}({3}), is married with the sibling of {0}, {4}({5})',
                         'tokens': [] # tokens[i] = (indi_nm, indi_id, child_nm, child_id, sibling_nm, sibling_id)
-                    }
+                    },
                 }
             }
         }
@@ -516,7 +521,6 @@ class Gedcom:
             Death should be less than 150 years after birth for dead people, and 
             current date should be less than 150 years after birth for all living people
         """
-        err_msg_lst = []
         for indi in self.indis.values():
             if indi.age >= 150:  # age >= 150
                 self.msg_collections['err']['msg_container']['US07']['tokens'].append(
@@ -643,10 +647,49 @@ class Gedcom:
         """
 
     def us26_corrspnding_entries(self, debug=False):
-        """ Benji, <time you manipulate the code>
+        """ Benji, March 24th, 2019
             US26: Corresponding entries
-            <definition of the user story>
+            All family roles (spouse, child) specified in an individual record should have
+            corresponding entries in the corresponding family records. Likewise, all individual
+            roles (spouse, child) specified in family records should have corresponding entries
+            in the corresponding  individual's records.
+            i.e. the information in the individual and family records should be consistent.
         """
+        fam_collection = self.mongo_instance.get_collection('family')  # handles of MongoDB
+        indi_collection = self.mongo_instance.get_collection('individual')
+
+        # Following two sets are retrieved respectively from family and individual collections. They should be equal if the entries match.
+        indi_from_fams = {member['indi_id'] for doc in fam_collection.find({}, {'members': 1}) for member in doc['members'] if member['indi_id']}
+        indi_from_indi = {doc['indi_id'] for doc in indi_collection.find({}, {'indi_id': 1}) if doc['indi_id']}
+
+        # Same as above, but it's for family id check
+        fam_from_fams = {doc['fam_id'] for doc in fam_collection.find({}, {'fam_id': 1}) if doc['fam_id']}
+        fam_from_indi = set(
+            [doc['child_of_family'] for doc in indi_collection.find({}, {'child_of_family': 1}) if doc['child_of_family']] +\
+            [fam_s for doc in indi_collection.find({}, {'spous_of_family': 1}) for fam_s in doc['spous_of_family'] if fam_s]
+        )
+
+        #print(f'indi_from_fams: {indi_from_fams}\nindi_from_indi: {indi_from_indi}')
+        #print(f'fam_from_fams: {fam_from_fams}\nfam_from_indi: {fam_from_indi}')
+
+        if indi_from_fams != indi_from_indi:
+            token = (
+                'Individuals',
+                ', '.join(indi_from_fams - indi_from_indi if indi_from_fams - indi_from_indi else indi_from_indi - indi_from_fams),
+                'individual collection' if indi_from_fams - indi_from_indi else 'family collection'
+            )
+            self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)
+
+        if fam_from_fams != fam_from_indi:
+            token = (
+                'Families',
+                ', '.join(fam_from_fams - fam_from_indi if fam_from_fams - fam_from_indi else fam_from_indi - fam_from_fams),
+                'individual collection' if fam_from_fams - fam_from_indi else 'family collection'
+            )
+            self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)
+
+        if debug:
+            return self.msg_collections['err']['msg_container']['US26']['tokens']
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -699,7 +742,7 @@ class Individual(Entity):
     def mongo_data(self):
         """ return a dictionary with mongodb data for database"""
         return {
-            'idni_id': self.indi_id,
+            'indi_id': self.indi_id,
             'name': self.name,
             'sex': self.sex,
             'birt_dt': self.birt_dt,
