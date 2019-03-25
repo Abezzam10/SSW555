@@ -91,12 +91,12 @@ class Gedcom:
                     },
 
                     'US01': {
-                        'fmt_msg': 'The {} {} has incorrect {}'
+                        'fmt_msg': 'The {} {} has incorrect {}',
                         'tokens': []  # tokens[i] = (family|individual id tag+time )
                     },
 
                     'US14': {
-                        'fmt_msg': 'The family {} contains multi birth greater than {}, indi_id: [{}]',
+                        'fmt_msg': 'The family {} contains multi birth greater than {}, indi_id4 [{}]',
                         'tokens': []  # tokens[i] = (fam_id, less_than, id_values)
                     },
 
@@ -420,17 +420,9 @@ class Gedcom:
         result_of_docs = MongoDB().get_collection('entity').find(cond)
 
         for doc in result_of_docs:
-            tmp_str = ""
+            # tmp_str = ""
             if doc['cat'] == 'fam':
-                self.msg_collections['err']['msg_container']['US01']['tokens'].append(
-                    (
-                        doc['id'],
-                        indi.indi_id,
-                        ' '.join((indi.name['first'], indi.name['last'])),
-                        indi.age
-                    )
-                )
-                for family
+                # for family
                 if doc['marr_dt'] is not None and doc['marr_dt'] > current_time:
                     # tmp_str += f"marriage date [{doc['marr_dt']}], "
                     self.msg_collections['err']['msg_container']['US01']['tokens'].append(
