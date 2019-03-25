@@ -17,6 +17,8 @@ class test_us26(unittest.TestCase):
     def test_indi_entry_bleach(self):
         """ Individual data missed in family collection."""
         ged = Gedcom('GEDCOM_files/us26/us26_indi_entry_bleach.ged')
+        ged.mongo_instance.drop_collection("family")
+        ged.mongo_instance.drop_collection("individual")
         ged.insert_to_mongo()
 
         expected = [('Individuals', '@I4@', 'family collection')]
@@ -30,6 +32,8 @@ class test_us26(unittest.TestCase):
     def test_no_err(self):
         """ Positive test for US26."""
         ged = Gedcom('GEDCOM_files/us26/us26_no_err.ged')
+        ged.mongo_instance.drop_collection("family")
+        ged.mongo_instance.drop_collection("individual")
         ged.insert_to_mongo()
 
         expected = []

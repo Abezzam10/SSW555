@@ -997,14 +997,14 @@ class Family(Entity):
 def main():
     """ Entrance"""
 
-    # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
-    gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
+    gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
+    # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
 
     # keep the three following lines for the Mongo, we may use this later.
-    # mongo_instance = MongoDB()
-    # mongo_instance.drop_collection("family")
-    # mongo_instance.drop_collection("individual")
-    # gdm.insert_to_mongo()
+    mongo_instance = MongoDB()
+    mongo_instance.drop_collection("family")
+    mongo_instance.drop_collection("individual")
+    gdm.insert_to_mongo()
     # mongo_instance.delete_database()
     
     """ User Stories for the Spint2 """
@@ -1023,10 +1023,10 @@ def main():
     # # Ray
     # gdm.us02_birth_before_marriage()
     # gdm.us11_no_bigamy()
-    print(gdm.us08_birt_b4_marr_of_par())
+    # print(gdm.us08_birt_b4_marr_of_par())
 
-    gdm.us13_sibling_spacing()
-    gdm.msg_print()
+    # gdm.us13_sibling_spacing()
+    # gdm.msg_print()
 
 if __name__ == "__main__":
     main()
