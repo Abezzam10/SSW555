@@ -64,6 +64,20 @@ class Gedcom:
                         'fmt_msg': 'Unmatched entry found: {} {} not found in {}.',
                         'tokens': [] # tokens[i] = ('individual'|'family', list of unmatched entries, 'family'|'inidividual' + 'data')
                     },
+                    'US03': {
+                        'fmt_msg': 'Death date before birth date for individual, {} with id : {}',
+                        'tokens': []   #tokens[i] = (name, indi_id)
+                    },
+
+                    'US05': {
+                        'fmt_msg': 'Death before marriage of {}, {} with individual id : {} and family id: {}',
+                        'tokens': []   #tokens[i] =(husband/wife, name, indi_id, fam_id)
+                    },
+
+                    'US04': {
+                        'fmt_msg': 'Divorce date before marriage date of family with id : {}',
+                        'tokens': []   #tokens[i] = (fam_id)
+                    }
                 }
             },
 
@@ -75,6 +89,11 @@ class Gedcom:
                         'fmt_msg': 'The child of {0}({1}), {2}({3}), is married with the sibling of {0}, {4}({5})',
                         'tokens': [] # tokens[i] = (indi_nm, indi_id, child_nm, child_id, sibling_nm, sibling_id)
                     },
+
+                    'US13': {
+                        'fmt_msg': '{} with id: {} and {} with id : {} are siblings and their birth dates are {} days apart.',
+                        'tokens': []     #tokens[i] = (sibling1_name, sibling1_id, sibling2_name, sibling2_id, difference of birth date in days)
+                    }
                 }
             }
         }
@@ -403,46 +422,75 @@ class Gedcom:
         if debug:
             return self.msg_collections['err']['msg_container']['US22']['tokens']       
 
-    def us05_marriage_before_death(self):
+    def us05_marriage_before_death(self, debug=False):
         """ John February 23, 2018
             US05: Marriage Before Death
             This method checks if the marriage date is before the husband's or wifes's death date or not.
             Method prints an error if anomalies are found.
         """
-        error_message_list = []
+#        error_message_list = []
         
         for fam in self.fams.values():
             for indi in self.indis.values():
                 
                 if fam.husb_id == indi.indi_id:
                     husb_dt = indi.deat_dt
+                    husb_name = ' '.join((indi.name['first'], indi.name['last']))
+                    husb_id = indi.indi_id
+
                 if fam.wife_id == indi.indi_id:
                     wife_dt = indi.deat_dt
-            
+                    wife_name = ' '.join((indi.name['first'], indi.name['last']))
+                    wife_id = indi.indi_id
+
             if husb_dt is not None and fam.marr_dt > husb_dt:
-                print("Error US05: death before marriage of husband with id : ", fam.husb_id)
-                error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
+                self.msg_collections['err']['msg_container']['US05']['tokens'].append(
+                    (
+                        'husband',
+                        husb_name,
+                        husb_id,
+                        fam.fam_id
+                    )
+                )
+#                print("Error US05: death before marriage of husband with id : ", fam.husb_id)
+#                error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
             
             if wife_dt is not None and fam.marr_dt > wife_dt:
-                print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
-                error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
-        
-        return error_message_list
+                self.msg_collections['err']['msg_container']['US05']['tokens'].append(
+                    (
+                        'wife',
+                        wife_name,
+                        wife_id,
+                        fam.fam_id
+                    )
+                )
+#                print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
+#                error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
+                
+        if debug:
+            return self.msg_collections['err']['msg_container']['US05']['tokens']
 
-    def us03_birth_before_death(self):
+    def us03_birth_before_death(self, debug=False):
         """ John February 18th, 2018
             US03: Birth before Death
             This method checks if the birth date comes before the death date or not. 
             Method prints an error if anomalies are found.
         """
-        error_message_list = []
+#        error_message_list = []
         for people in self.indis.values():
             if people.deat_dt is None:
                 continue
             elif people.birt_dt > people.deat_dt:
-                print("Error US03: death date before birth date for individual with id : "+people.indi_id)
-                error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
-        return error_message_list
+                self.msg_collections['err']['msg_container']['US03']['tokens'].append(
+                    (
+                        ' '.join((people.name['first'], people.name['last'])),
+                        people.indi_id
+                    )
+                )
+ #               print("Error US03: death date before birth date for individual with id : "+people.indi_id)
+ #               error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
+        if debug:
+            return self.msg_collections['err']['msg_container']['US03']['tokens']
 
     def us06_divorce_before_death(self, debug=False):
         """ Benji, Feb 21st, 2019
@@ -510,10 +558,21 @@ class Gedcom:
             return self.msg_collections['anomaly']['msg_container']['US20']['tokens']
 
     def us04_marr_b4_div(self, debug=False):
-        """ John, <time you manipulate the code>
+        """ John, March 20th, 2019
             US04: Marriage before divorce
-            <definition of the user story>
+            Marriage should occur before divorce of spouses, and divorce can only occur after marriage
         """
+        for fam in self.fams.values():
+            if (fam.div_dt==None):
+                continue
+            elif(fam.marr_dt>fam.div_dt):
+                self.msg_collections['err']['msg_container']['US04']['tokens'].append(
+                            (
+                                fam.fam_id
+                            )
+                        )
+        if debug:
+            return self.msg_collections['err']['msg_container']['US04']['tokens']
 
     def us07_less_than_150_yrs(self, debug=False):
         """ Benji, March 4th, 2019
@@ -541,10 +600,34 @@ class Gedcom:
         """
 
     def us13_sibling_spacing(self, debug=False):
-        """ John, <time you manipulate the code>
+        """ John, 20th March, 2019
             US13: Siblings spacing
-            <definition of the user story>
+            Birth dates of siblings should be more than 8 months apart or less than 2 days apart
+             (twins may be born one day apart, e.g. 11:59 PM and 12:02 AM the following calendar day)
         """
+        siblings = []
+        for indi in self.indis.values():
+            flag = False
+            for tuple in self.msg_collections['anomaly']['msg_container']['US13']['tokens']:
+                if (indi.indi_id == tuple[1] or indi.indi_id == tuple[3]):
+                    flag = True
+            if flag:
+                continue
+            siblings = self._find_siblings(indi)
+            for i in range(len(siblings)):
+                for j in range(i+1,len(siblings)):
+                    if(abs((siblings[i].birt_dt-siblings[j].birt_dt).days) < 274 and abs((siblings[i].birt_dt-siblings[j].birt_dt).days) > 1):
+                        self.msg_collections['anomaly']['msg_container']['US13']['tokens'].append(
+                            (
+                                ' '.join((siblings[i].name['first'], siblings[i].name['last'])),
+                                siblings[i].indi_id,
+                                ' '.join((siblings[j].name['first'], siblings[j].name['last'])),
+                                siblings[j].indi_id,
+                                abs((siblings[i].birt_dt-siblings[j].birt_dt).days)
+                            )
+                        )
+        if debug:
+            return self.msg_collections['anomaly']['msg_container']['US13']['tokens']            
 
     def us14_multi_birt_less_than_5(self, debug=False):
         """ Javer, <time you manipulate the code>
@@ -801,7 +884,7 @@ def main():
     gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
 
     # keep the three following lines for the Mongo, we may use this later.
-    mongo_instance = MongoDB()
+    # mongo_instance = MongoDB()
     # mongo_instance.drop_collection("family")
     # mongo_instance.drop_collection("individual")
     # gdm.insert_to_mongo()
@@ -809,7 +892,7 @@ def main():
     
     """ User Stories for the Spint2 """
     # Javer
-    gdm.us14_multi_birt_less_than_5()
+    # gdm.us14_multi_birt_less_than_5()
     # gdm.us16_male_last_name()
     
     # # John
@@ -823,6 +906,9 @@ def main():
     # # Ray
     # gdm.us02_birth_before_marriage()
     # gdm.us11_no_bigamy()
+
+    gdm.us13_sibling_spacing()
+    gdm.msg_print()
 
     
 
