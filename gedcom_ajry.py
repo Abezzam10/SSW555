@@ -64,6 +64,7 @@ class Gedcom:
                         'fmt_msg': 'Unmatched entry found: {} {} not found in {}.',
                         'tokens': [] # tokens[i] = ('individual'|'family', list of unmatched entries, 'family'|'inidividual' + 'data')
                     },
+
                     'US03': {
                         'fmt_msg': 'Death date before birth date for individual, {} with id : {}',
                         'tokens': []   #tokens[i] = (name, indi_id)
@@ -77,7 +78,7 @@ class Gedcom:
                     'US04': {
                         'fmt_msg': 'Divorce date before marriage date of family with id : {}',
                         'tokens': []   #tokens[i] = (fam_id)
-                    }
+                    },
 
                     'US23': {
                         'fmt_msg': 'The individual {} and {} does not have a unique name/birth date!.',
