@@ -89,6 +89,21 @@ class Gedcom:
                         'fmt_msg': 'The family {} with husband {} and wife {} has child birth before their marriage or later than 9 months after the divorce!.',
                         'tokens': []  # tokens[i] = (indi_id, name, age)
                     },
+
+                    'US01': {
+                        'fmt_msg': 'The {} {} has incorrect {}'
+                        'tokens': []  # tokens[i] = (family|individual id tag+time )
+                    },
+
+                    'US14': {
+                        'fmt_msg': 'The family {} contains multi birth greater than {}, indi_id: [{}]',
+                        'tokens': []  # tokens[i] = (fam_id, less_than, id_values)
+                    },
+
+                    'US16': {
+                        'fmt_msg': 'The family {} contains different male last names:{}, with values:{}',
+                        'tokens': []  # tokens[i] = (fam_id, last_name, id_values)
+                    },
                 }
             },
 
@@ -385,7 +400,7 @@ class Gedcom:
         if debug:
             return self.msg_collections['err']['msg_container']['US11']['tokens']
 
-    def us01_date_validate(self):
+    def us01_date_validate(self, debug=False):
         """ Javer, Feb 19, 2019
             Date Validate
             Dates (birth, marriage, divorce, death) should not be after the current date
@@ -401,29 +416,65 @@ class Gedcom:
             ]
         }
 
-        error_mes = ""
+        # error_mes = ""
         result_of_docs = MongoDB().get_collection('entity').find(cond)
 
         for doc in result_of_docs:
             tmp_str = ""
             if doc['cat'] == 'fam':
-                # for family
+                self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                    (
+                        doc['id'],
+                        indi.indi_id,
+                        ' '.join((indi.name['first'], indi.name['last'])),
+                        indi.age
+                    )
+                )
+                for family
                 if doc['marr_dt'] is not None and doc['marr_dt'] > current_time:
-                    tmp_str += f"marriage date [{doc['marr_dt']}], "
+                    # tmp_str += f"marriage date [{doc['marr_dt']}], "
+                    self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                        (
+                            "family",
+                            doc['id'],
+                            f"marriage date: [{doc['marr_dt']}]"
+                        )
+                    )
                 if doc['div_dt'] is not None and doc['div_dt'] > current_time:
-                    tmp_str += f"divorice date [{doc['div_dt']}]"
-                error_mes += f"Family entity ID: {doc['id']}, have incorrect {tmp_str}\n"
+                    self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                        (
+                            "family",
+                            doc['id'],
+                            f"divorice date: [{doc['div_dt']}]"
+                        )
+                    )
 
             if doc['cat'] == 'indi':
                 # for individual
                 if doc['birt_dt'] is not None and doc['birt_dt'] > current_time:
-                    tmp_str += f"birth date [{doc['birt_dt']}], "
+                    self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                        (
+                            "individual",
+                            doc['id'],
+                            f"birth date: [{doc['birt_dt']}]"
+                        )
+                    )
+                    # tmp_str += f"birth date [{doc['birt_dt']}], "
                 if doc['deat_dt'] is not None and doc['deat_dt'] > current_time:
-                    tmp_str += f"deadth date [{doc['deat_dt']}]"
-                error_mes += f"Individual entity ID: {doc['id']}, have incorrect {tmp_str}\n"
+                    self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                        (
+                            "individual",
+                            doc['id'],
+                            f"deadth date: [{doc['deat_dt']}]"
+                        )
+                    )
+                #     tmp_str += f"deadth date [{doc['deat_dt']}]"
+                # error_mes += f"Individual entity ID: {doc['id']}, have incorrect {tmp_str}\n"
         
-        print(f"Tested current_date: {current_time}")
-        print(error_mes)
+        # print(f"Tested current_date: {current_time}")
+        # print(error_mes)
+        if debug:
+            return self.msg_collections['err']['msg_container']['US01']['tokens']
 
     def us22_unique_ids(self, debug=False):
         """ Javer, Feb 23, 2019
@@ -711,13 +762,17 @@ class Gedcom:
 
                 result_of_indis = self.mongo_instance.get_collection('individual').aggregate(group_and_count_by_date_cond)
                 for indi in result_of_indis:
-                    err_msg_lst.append(f"Error for US14: Family ({indi['fam_id']}) contains multi birth greater than {less_than}, indi_id: [{', '.join(indi['indi_ids'])}]")
+                    self.msg_collections['err']['msg_container']['US14']['tokens'].append(
+                        (
+                            indi['fam_id'],
+                            less_than,
+                            ', '.join(indi['indi_ids'])
+                        )
+                    )
+                    # err_msg_lst.append(f"Error for US14: Family ({indi['fam_id']}) contains multi birth greater than {less_than}, indi_id: [{', '.join(indi['indi_ids'])}]")
 
         if debug:
-            return err_msg_lst
-        else:
-            for err_msg in err_msg_lst:
-                print(err_msg)
+            return self.msg_collections['err']['msg_container']['US14']['tokens']
 
     def us16_male_last_name(self, debug=False):
         """ Javer, <Mar 3, 2019>
@@ -751,13 +806,18 @@ class Gedcom:
                                 diff_male_last_name_with_indi_id[member['name']['last']] = member['indi_id']
 
             if len(diff_male_last_name_with_indi_id) > 1:
-                err_msg_lst.append(f"Error for US16: Family ({doc['fam_id']}) contains different male last names: {', '.join(diff_male_last_name_with_indi_id.values())}, with values: {','.join(diff_male_last_name_with_indi_id)}")
+                self.msg_collections['err']['msg_container']['US16']['tokens'].append(
+                    (
+                        doc['fam_id'],
+                        ', '.join(diff_male_last_name_with_indi_id.values()),
+                        ','.join(diff_male_last_name_with_indi_id)
+                    )
+                )
+                # err_msg_lst.append(f"Error for US16: Family ({doc['fam_id']}) contains different male last names: {', '.join(diff_male_last_name_with_indi_id.values())}, with values: {','.join(diff_male_last_name_with_indi_id)}")
 
         if debug:
-            return err_msg_lst
-        else:
-            for err_msg in err_msg_lst:
-                print(err_msg)
+            return self.msg_collections['err']['msg_container']['US16']['tokens']
+
 
     def us23_unique_name_and_birt(self, debug=False):
         """ Ray, <Mar 24, 2019>
