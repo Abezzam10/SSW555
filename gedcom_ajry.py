@@ -78,6 +78,16 @@ class Gedcom:
                         'fmt_msg': 'Divorce date before marriage date of family with id : {}',
                         'tokens': []   #tokens[i] = (fam_id)
                     }
+
+                    'US23': {
+                        'fmt_msg': 'The individual {} and {} does not have a unique name/birth date!.',
+                        'tokens': []  # tokens[i] = (indi_id, name, age)
+                    },
+
+                    'US08': {
+                        'fmt_msg': 'The family {} with husband {} and wife {} has child birth before their marriage or later than 9 months after the divorce!.',
+                        'tokens': []  # tokens[i] = (indi_id, name, age)
+                    },
                 }
             },
 
@@ -594,10 +604,35 @@ class Gedcom:
             return self.msg_collections['err']['msg_container']['US07']['tokens']
 
     def us08_birt_b4_marr_of_par(self, debug=False):
-        """ Ray, <time you manipulate the code>
+        """ Ray, <Mar 24, 2019>
             US08: Birth before marriage of parents
-            <definition of the user story>
+            <Children should be born after marriage of parents (and not more than 9 months after their divorce)>
         """
+
+        for fam in self.fams.values():
+            if fam.div_dt is None: 
+                for child_id in fam.chil_id:
+                    for people in self.indis.values():
+                        if people.indi_id == child_id and people.birt_dt < fam.marr_dt:
+                            self.msg_collections['err']['msg_container']['US08']['tokens'].append(
+                                (
+                                    fam.fam_id, fam.husb_id, fam.wife_id
+                                )
+                            )
+            else: 
+                for child_id in fam.chil_id:
+                    for people in self.indis.values():
+                        if people.indi_id == child_id: 
+                            duration = people.birt_dt - fam.div_dt 
+                            if duration.days > 274: 
+                                self.msg_collections['err']['msg_container']['US08']['tokens'].append(
+                                    (
+                                        fam.fam_id, fam.husb_id, fam.wife_id
+                                    )
+                                )
+
+        if debug:
+            return self.msg_collections['err']['msg_container']['US08']['tokens']
 
     def us13_sibling_spacing(self, debug=False):
         """ John, 20th March, 2019
@@ -724,10 +759,40 @@ class Gedcom:
                 print(err_msg)
 
     def us23_unique_name_and_birt(self, debug=False):
-        """ Ray, <time you manipulate the code>
+        """ Ray, <Mar 24, 2019>
             US23: Unique name and birth date
-            <definition of the user story>
+            <No more than one individual with the same name and birth date should appear in a GEDCOM file>
         """
+        flag = True
+        for people in self.indis.values():
+            if people.birt_dt is None:
+               self.msg_collections['err']['msg_container']['US23']['tokens'].append(
+                    (
+                        people.indi_id,
+                            ' '.join((people.name['first'], people.name['last'])),
+                    )
+                )
+            if people.name is None: 
+                self.msg_collections['err']['msg_container']['US23']['tokens'].append(
+                    (
+                        people.indi_id,
+                        ' '.join((people.name['first'], people.name['last'])),
+                    )
+                )
+            for people2 in self.indis.values():
+                if people.indi_id != people2.indi_id:
+                    if people.birt_dt == people2.birt_dt or people.name == people2.name:
+                        if flag:
+                            self.msg_collections['err']['msg_container']['US23']['tokens'].append(
+                                (
+                                    people.indi_id, people2.indi_id
+                                )
+                            )
+                            flag = False
+                            
+        if debug:
+            return self.msg_collections['err']['msg_container']['US23']['tokens']
+
 
     def us26_corrspnding_entries(self, debug=False):
         """ Benji, March 24th, 2019
@@ -892,7 +957,7 @@ def main():
     
     """ User Stories for the Spint2 """
     # Javer
-    # gdm.us14_multi_birt_less_than_5()
+    #gdm.us14_multi_birt_less_than_5()
     # gdm.us16_male_last_name()
     
     # # John
@@ -906,6 +971,7 @@ def main():
     # # Ray
     # gdm.us02_birth_before_marriage()
     # gdm.us11_no_bigamy()
+    print(gdm.us08_birt_b4_marr_of_par())
 
     gdm.us13_sibling_spacing()
     gdm.msg_print()
