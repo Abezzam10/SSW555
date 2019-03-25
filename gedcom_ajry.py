@@ -794,7 +794,6 @@ class Gedcom:
         if debug:
             return self.msg_collections['err']['msg_container']['US23']['tokens']
 
-
     def us26_corrspnding_entries(self, debug=False):
         """ Benji, March 24th, 2019
             US26: Corresponding entries
@@ -976,8 +975,6 @@ def main():
 
     gdm.us13_sibling_spacing()
     gdm.msg_print()
-
-    
 
 if __name__ == "__main__":
     main()
