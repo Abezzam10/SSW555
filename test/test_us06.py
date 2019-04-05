@@ -12,9 +12,10 @@ class test_us06(unittest.TestCase):
     def test_both_die_before_divorce(self):
         """ husband and wife both die before divorce"""
         expected = [
-            ('Jack Monroe', 'husband', '@F1@', '05/16/97', '02/10/04'),
-            ('Lucy Oliver', 'wife', '@F1@', '03/02/03', '02/10/04')
+            ('Jack Monroe', 'husband', '@F1@', '05/16/1997', '02/10/2004'),
+            ('Lucy Oliver', 'wife', '@F1@', '03/02/2003', '02/10/2004')
             ]
+
         ged = Gedcom('./GEDCOM_files/us06/us06_both_die_b4_div.ged')
         self.assertEqual(ged.us06_divorce_before_death(debug=True), expected)
         
@@ -36,7 +37,7 @@ class test_us06(unittest.TestCase):
     def test_husb_die_before_divorce(self):
         """ husband dies before divorce"""
         ged = Gedcom('./GEDCOM_files/us06/us06_husb_die_b4_div.ged')
-        expected = [('Jack Monroe', 'husband', '@F1@', '05/16/97', '02/10/04')]
+        expected = [('Jack Monroe', 'husband', '@F1@', '05/16/1997', '02/10/2004')]
         self.assertEqual(ged.us06_divorce_before_death(debug=True), expected)
 
 if __name__ == '__main__':
