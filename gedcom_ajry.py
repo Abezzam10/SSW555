@@ -108,7 +108,47 @@ class Gedcom:
                     'US02': {
                         'fmt_msg': 'The {} (born {}) of family {}, {}({}), was born later than the marriage date (marriage date {}).',
                         'tokens': []  # tokens[i] = ('husband'|'wife', birt_dt, fam_id, indi_name, indi_id, marr_dt)
-                    }
+                    },
+
+                    'US19': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
+
+                    'US29': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
+
+                    'US17': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
+
+                    'US28': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
+
+                    'US18': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
+
+                    'US21': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
+
+                    'US33': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
+
+                    'US31': {
+                        'fmt_msg': '',
+                        'tokens': []  # tokens[i] = 
+                    },
                 }
             },
 
@@ -962,6 +1002,54 @@ class Gedcom:
             )
             self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)"""
 
+    def us19_first_cousins_should_not_marry(self, debug=False):
+        """ John, date???
+            US19: 
+        """
+        pass
+    
+    def us29_list_deceased(self, debug=False):
+        """ John, date???
+            US29: 
+        """
+        pass
+
+    def us17_no_marriages_to_children(self, debug=False):
+        """ Benji, date???
+            US17: 
+        """
+        pass
+    
+    def us28_order_siblings_by_age(self, debug=False):
+        """ Benji, date???
+            US28: 
+        """
+        pass
+
+    def us18_siblings_should_not_marry(self, debug=False):
+        """ Ray, date???
+            US18: 
+        """
+        pass
+    
+    def us21_correct_gender_for_role(self, debug=False):
+        """ Ray, date???
+            US21: 
+        """
+        pass
+    
+    def us33_list_orphans(self, debug=False):
+        """ Javer, date???
+            US33: 
+        """
+        pass
+
+    def us31_list_living_single(self, debug=False):
+        """ Javer, date???
+            US31: 
+        """
+        pass
+        
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
