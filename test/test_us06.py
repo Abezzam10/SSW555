@@ -12,31 +12,32 @@ class test_us06(unittest.TestCase):
     def test_both_die_before_divorce(self):
         """ husband and wife both die before divorce"""
         expected = [
-            ('@F1@', '02/10/04', '@I1@', 'husband', {'first': 'Jack', 'last': 'Monroe'}, '05/16/97'),
-            ('@F1@', '02/10/04', '@I2@', 'wife', {'first': 'Lucy', 'last': 'Oliver'}, '03/02/03')
+            ('Jack Monroe', 'husband', '@F1@', '05/16/1997', '02/10/2004'),
+            ('Lucy Oliver', 'wife', '@F1@', '03/02/2003', '02/10/2004')
             ]
-        ged = Gedcom('./GEDCOM_files/us06_both_die_b4_div.ged')
+
+        ged = Gedcom('./GEDCOM_files/us06/us06_both_die_b4_div.ged')
         self.assertEqual(ged.us06_divorce_before_death(debug=True), expected)
         
     def test_both_live_divorce(self):
         """ husband and wife divorce but both are alive"""
-        ged = Gedcom('./GEDCOM_files/us06_both_live_div.ged')
+        ged = Gedcom('./GEDCOM_files/us06/us06_both_live_div.ged')
         self.assertEqual(ged.us06_divorce_before_death(debug=True), [])
 
     def test_both_live_not_divorce(self):
         """ husband and wife are alive and happy ever after"""
-        ged = Gedcom('./GEDCOM_files/us06_both_live_not_div.ged')
+        ged = Gedcom('./GEDCOM_files/us06/us06_both_live_not_div.ged')
         self.assertEqual(ged.us06_divorce_before_death(debug=True), [])
 
     def test_husb_die_after_divorce(self):
         """ husband dies after divorce"""
-        ged = Gedcom('./GEDCOM_files/us06_husb_die_af_div.ged')
+        ged = Gedcom('./GEDCOM_files/us06/us06_husb_die_af_div.ged')
         self.assertEqual(ged.us06_divorce_before_death(debug=True), [])
 
     def test_husb_die_before_divorce(self):
         """ husband dies before divorce"""
-        ged = Gedcom('./GEDCOM_files/us06_husb_die_b4_div.ged')
-        expected = [('@F1@', '02/10/04', '@I1@', 'husband', {'first': 'Jack', 'last': 'Monroe'}, '05/16/97')]
+        ged = Gedcom('./GEDCOM_files/us06/us06_husb_die_b4_div.ged')
+        expected = [('Jack Monroe', 'husband', '@F1@', '05/16/1997', '02/10/2004')]
         self.assertEqual(ged.us06_divorce_before_death(debug=True), expected)
 
 if __name__ == '__main__':
