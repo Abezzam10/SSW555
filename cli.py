@@ -30,4 +30,9 @@ def gedcom(gedfile):
     ged.us07_less_than_150_yrs()
     ged.us26_corrspnding_entries()
 
+    ged.us04_marr_b4_div()
+    ged.us08_birt_b4_marr_of_par()
+    ged.us13_sibling_spacing()
+    ged.us23_unique_name_and_birt()
+
     ged.msg_print()

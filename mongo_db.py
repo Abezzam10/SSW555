@@ -1,3 +1,4 @@
+""" Mongo DB wrapper function"""
 from pymongo import MongoClient
 
 class MongoDB(object):
@@ -33,4 +34,3 @@ class MongoDB(object):
     def get_collection(self, collection):
         """ return a specific collection """
         return self.client[self.DATABASE][collection]
-

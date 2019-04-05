@@ -61,7 +61,7 @@ class Gedcom:
                     },
 
                     'US26': {
-                        'fmt_msg': 'Unmatched entry found: {} {} not found in {}.',
+                        'fmt_msg': '{0} objects\' entry doesn\'t match, symmetrical entries: {1}',
                         'tokens': [] # tokens[i] = ('individual'|'family', list of unmatched entries, 'family'|'inidividual' + 'data')
                     },
 
@@ -91,12 +91,12 @@ class Gedcom:
                     },
 
                     'US01': {
-                        'fmt_msg': 'The {} {} has incorrect {}',
+                        'fmt_msg': '{0}\'s {1} is bigger than current date, {1}: {2}',
                         'tokens': []  # tokens[i] = (family|individual id tag+time )
                     },
 
                     'US14': {
-                        'fmt_msg': 'The family {} contains multi birth greater than {}, indi_id4 [{}]',
+                        'fmt_msg': 'The family {} contains more than {} children. Number of children: {}',
                         'tokens': []  # tokens[i] = (fam_id, less_than, id_values)
                     },
 
@@ -104,6 +104,11 @@ class Gedcom:
                         'fmt_msg': 'The family {} contains different male last names:{}, with values:{}',
                         'tokens': []  # tokens[i] = (fam_id, last_name, id_values)
                     },
+
+                    'US02': {
+                        'fmt_msg': 'The {} (born {}) of family {}, {}({}), was born later than the marriage date (marriage date {}).',
+                        'tokens': []  # tokens[i] = ('husband'|'wife', birt_dt, fam_id, indi_name, indi_id, marr_dt)
+                    }
                 }
             },
 
@@ -272,23 +277,23 @@ class Gedcom:
         print(tabulate(fams_rows, headers=Family.pp_header, tablefmt='fancy_grid', showindex='never'))  
 
     def _find_children(self, indi):
-        """ return all of the children objects of given indi_id"""
+        """ return all of the children objects of given indi object"""
         children = []
 
         for fam_id in indi.fam_s:
             children.extend(self.fams[fam_id].chil_id)  # extend all children's id(string) of this individual
 
-        return [self.indis[i] for i in children]  # list of individual objects
+        return [self.indis[i] for i in [child for child in children if child in self.indis]]  # list of individual objects
 
     def _find_siblings(self, indi):
-        """ return all of the siblings objects of given indi_id"""
+        """ return all of the siblings objects of given indi object"""
         siblings = []
         if not indi.fam_c:
             return []
         else:
             siblings.extend(self.fams[indi.fam_c].chil_id)
 
-        return [self.indis[i] for i in siblings]
+        return [self.indis[i] for i in [sib for sib in siblings if sib in self.indis]]
 
     def insert_to_mongo(self):
         """ invoke this method everytime at the start of the userstory
@@ -296,16 +301,6 @@ class Gedcom:
             store the mongo client as an instance attr
             return a collection reference for use in user story method
         """
-        # TODO: When do the refactoring, we will remvoe the following commented lines
-        # indi_mg = [i.mongo_data() for i in self.indis.values()]  # create data set for insert_many()
-        # fam_mg = [f.mongo_data() for f in self.fams.values()]
-
-        # mongo_instance = MongoDB()
-
-        # entts = mongo_instance.get_collection("entity")
-        # entts.insert_many([*indi_mg, *fam_mg])
-
-        # return entts
         self.format_data_structure()
         fams = [f for f in self.formatted_data['family'].values()]
         indis = [i for i in self.formatted_data['individual'].values()]
@@ -338,28 +333,41 @@ class Gedcom:
     """                                           """
     """ ----------------------------------------- """
 
-    def us02_birth_before_marriage(self):
+    def us02_birth_before_marriage(self, debug=False):
         """ Ray, Feb 22th, 2019
             US02: Birth before marriage
             Birth should occur before marriage of an individual
         """
 
-        flag = False    #For Testing 
-        for uid, indi in self.indis.items(): 
-            temp = indi.birt_dt
-            temp2 = ""
-            for temp2 in indi.fam_s:
-                break
-            for fid, fam in self.fams.items():
+        for fam_id, fam in self.fams.items():
+            husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]
+
+            if husb.birt_dt > fam.marr_dt:  # husband was born after marriage
+                self.msg_collections['err']['msg_container']['US02']['tokens'].append(
+                    (
+                        'husband',
+                        husb.birt_dt.strftime('%m/%d/%Y'),
+                        fam_id,
+                        ' '.join((husb.name['first'], husb.name['last'])),
+                        husb.indi_id,
+                        fam.marr_dt.strftime('%m/%d/%Y')
+                    )
+                )
             
-                if temp2 == fam.fam_id: 
-                    if temp > fam.marr_dt: 
-                        print("Error US02: Marriage Date is greater than Birth Date for Family: ", fam.fam_id)
-                        return False
-                    else: 
-                        flag = True
-        
-        return flag
+            if wife.birt_dt > fam.marr_dt:  # wife was born after marriage
+                self.msg_collections['err']['msg_container']['US02']['tokens'].append(
+                    (
+                        'wife',
+                        wife.birt_dt.strftime('%m/%d/%Y'),
+                        fam_id,
+                        ' '.join((wife.name['first'], wife.name['last'])),
+                        wife.indi_id,
+                        fam.marr_dt.strftime('%m/%d/%Y')
+                    )
+                )
+
+            if debug:
+                return self.msg_collections['err']['msg_container']['US02']['tokens']
         
     def us11_no_bigamy(self, debug=False): 
         """ Ray, Feb 22th, 2019
@@ -407,6 +415,32 @@ class Gedcom:
         """
         current_time = datetime.now()
         # current_time = datetime.strptime("2000-01-01", "%Y-%m-%d") # for test
+
+        for fam_id, fam in self.fams.items():
+            if fam.marr_dt and fam.marr_dt > current_time:
+                self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                    (f'Family {fam_id}', 'marriage date', fam.marr_dt.strftime('%m/%d/%Y'))
+                )
+            
+            if fam.div_dt and fam.div_dt > current_time:
+                self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                    (f'Family {fam_id}', 'divorce date', fam.div_dt.strftime('%m/%d/%Y'))
+                )
+        
+        for indi_id, indi in self.indis.items():
+            if indi.birt_dt and indi.birt_dt > current_time:
+                self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                    (f'Individual {indi_id}', 'birth date', indi.birt_dt.strftime('%m/%d/%Y'))
+                )
+
+            if indi.deat_dt and indi.deat_dt > current_time:
+                self.msg_collections['err']['msg_container']['US01']['tokens'].append(
+                    (f'Individual {indi_id}', 'death date', indi.deat_dt.strftime('%m/%d/%Y'))
+                )
+
+        if debug:
+            return self.msg_collections['err']['msg_container']['US01']['tokens']
+    """
         cond = {
             "$or": [
                 {"birt_dt": {"$gt": current_time}},
@@ -417,7 +451,7 @@ class Gedcom:
         }
 
         # error_mes = ""
-        result_of_docs = MongoDB().get_collection('entity').find(cond)
+        result_of_docs = MongoDB().get_collection('individual').find(cond)
 
         for doc in result_of_docs:
             # tmp_str = ""
@@ -459,14 +493,7 @@ class Gedcom:
                             doc['id'],
                             f"deadth date: [{doc['deat_dt']}]"
                         )
-                    )
-                #     tmp_str += f"deadth date [{doc['deat_dt']}]"
-                # error_mes += f"Individual entity ID: {doc['id']}, have incorrect {tmp_str}\n"
-        
-        # print(f"Tested current_date: {current_time}")
-        # print(error_mes)
-        if debug:
-            return self.msg_collections['err']['msg_container']['US01']['tokens']
+                    )"""
 
     def us22_unique_ids(self, debug=False):
         """ Javer, Feb 23, 2019
@@ -482,7 +509,6 @@ class Gedcom:
             This method checks if the marriage date is before the husband's or wifes's death date or not.
             Method prints an error if anomalies are found.
         """
-#        error_message_list = []
         
         for fam in self.fams.values():
             for indi in self.indis.values():
@@ -506,9 +532,7 @@ class Gedcom:
                         fam.fam_id
                     )
                 )
-#                print("Error US05: death before marriage of husband with id : ", fam.husb_id)
-#                error_message_list.append("Error, death before marriage of husband with id : "+fam.husb_id)
-            
+           
             if wife_dt is not None and fam.marr_dt > wife_dt:
                 self.msg_collections['err']['msg_container']['US05']['tokens'].append(
                     (
@@ -518,9 +542,7 @@ class Gedcom:
                         fam.fam_id
                     )
                 )
-#                print("Error US05: death before her marriage of wife with id : ", fam.wife_id)
-#                error_message_list.append("Error, death before her marriage of wife with id : "+fam.wife_id)
-                
+          
         if debug:
             return self.msg_collections['err']['msg_container']['US05']['tokens']
 
@@ -530,7 +552,7 @@ class Gedcom:
             This method checks if the birth date comes before the death date or not. 
             Method prints an error if anomalies are found.
         """
-#        error_message_list = []
+        
         for people in self.indis.values():
             if people.deat_dt is None:
                 continue
@@ -541,8 +563,7 @@ class Gedcom:
                         people.indi_id
                     )
                 )
- #               print("Error US03: death date before birth date for individual with id : "+people.indi_id)
- #               error_message_list.append("Error, death date before birth date for individual with id : "+people.indi_id)
+
         if debug:
             return self.msg_collections['err']['msg_container']['US03']['tokens']
 
@@ -563,8 +584,8 @@ class Gedcom:
                             ' '.join((husb.name['first'], husb.name['last'])),
                             'husband',
                             fam.fam_id,
-                            husb.deat_dt.strftime('%m/%d/%y'),
-                            fam.div_dt.strftime('%m/%d/%y')
+                            husb.deat_dt.strftime('%m/%d/%Y'),
+                            fam.div_dt.strftime('%m/%d/%Y')
                         )
                     )
 
@@ -574,8 +595,8 @@ class Gedcom:
                             ' '.join((wife.name['first'], wife.name['last'])),
                             'wife',
                             fam.fam_id,
-                            wife.deat_dt.strftime('%m/%d/%y'),
-                            fam.div_dt.strftime('%m/%d/%y')
+                            wife.deat_dt.strftime('%m/%d/%Y'),
+                            fam.div_dt.strftime('%m/%d/%Y')
                         )
                     )
 
@@ -617,9 +638,9 @@ class Gedcom:
             Marriage should occur before divorce of spouses, and divorce can only occur after marriage
         """
         for fam in self.fams.values():
-            if (fam.div_dt==None):
+            if fam.div_dt is None:
                 continue
-            elif(fam.marr_dt>fam.div_dt):
+            elif fam.marr_dt > fam.div_dt:
                 self.msg_collections['err']['msg_container']['US04']['tokens'].append(
                             (
                                 fam.fam_id
@@ -685,26 +706,33 @@ class Gedcom:
              (twins may be born one day apart, e.g. 11:59 PM and 12:02 AM the following calendar day)
         """
         siblings = []
+        msg_set = set()
         for indi in self.indis.values():
             flag = False
-            for tuple in self.msg_collections['anomaly']['msg_container']['US13']['tokens']:
-                if (indi.indi_id == tuple[1] or indi.indi_id == tuple[3]):
+            for tup in self.msg_collections['anomaly']['msg_container']['US13']['tokens']:
+                if (indi.indi_id == tup[1] or indi.indi_id == tup[3]):
                     flag = True
             if flag:
                 continue
             siblings = self._find_siblings(indi)
             for i in range(len(siblings)):
-                for j in range(i+1,len(siblings)):
+                for j in range(i + 1, len(siblings)):
                     if(abs((siblings[i].birt_dt-siblings[j].birt_dt).days) < 274 and abs((siblings[i].birt_dt-siblings[j].birt_dt).days) > 1):
-                        self.msg_collections['anomaly']['msg_container']['US13']['tokens'].append(
+                        
+                        msg_set.update(
+                            [
                             (
                                 ' '.join((siblings[i].name['first'], siblings[i].name['last'])),
                                 siblings[i].indi_id,
                                 ' '.join((siblings[j].name['first'], siblings[j].name['last'])),
                                 siblings[j].indi_id,
                                 abs((siblings[i].birt_dt-siblings[j].birt_dt).days)
-                            )
+                            )                               
+                            ]
                         )
+                        
+        self.msg_collections['anomaly']['msg_container']['US13']['tokens'].extend(msg_set)
+
         if debug:
             return self.msg_collections['anomaly']['msg_container']['US13']['tokens']            
 
@@ -713,6 +741,20 @@ class Gedcom:
             US14: Multiple births <= 5
             No more than five siblings should be born at the same time within a family
         """
+        for fam_id, fam in self.fams.items():
+            if len(fam.chil_id) > 5:
+                self.msg_collections['err']['msg_container']['US14']['tokens'].append(
+                    (
+                        fam_id,
+                        5,
+                        len(fam.chil_id)
+                    )
+                )
+
+        if debug:
+            return self.msg_collections['err']['msg_container']['US14']['tokens']
+
+    """
         err_msg_lst = []  # store each group of error message as a tuple
         less_than = 5 # using 2 for testing
 
@@ -762,9 +804,7 @@ class Gedcom:
                         )
                     )
                     # err_msg_lst.append(f"Error for US14: Family ({indi['fam_id']}) contains multi birth greater than {less_than}, indi_id: [{', '.join(indi['indi_ids'])}]")
-
-        if debug:
-            return self.msg_collections['err']['msg_container']['US14']['tokens']
+        """
 
     def us16_male_last_name(self, debug=False):
         """ Javer, <Mar 3, 2019>
@@ -819,7 +859,7 @@ class Gedcom:
         flag = True
         for people in self.indis.values():
             if people.birt_dt is None:
-               self.msg_collections['err']['msg_container']['US23']['tokens'].append(
+                self.msg_collections['err']['msg_container']['US23']['tokens'].append(
                     (
                         people.indi_id,
                             ' '.join((people.name['first'], people.name['last'])),
@@ -855,7 +895,41 @@ class Gedcom:
             in the corresponding  individual's records.
             i.e. the information in the individual and family records should be consistent.
         """
-        fam_collection = self.mongo_instance.get_collection('family')  # handles of MongoDB
+
+        indi_from_fams = set()  # get indi_id from fams records
+        for fam in self.fams.values():
+            #print(f'fam_id: {fam.fam_id}, husb_id: {fam.husb_id}, wife_id: {fam.wife_id}, chil_id: {fam.chil_id}')
+            indi_from_fams.add(fam.husb_id)
+            indi_from_fams.add(fam.wife_id)
+            indi_from_fams.update(fam.chil_id)
+
+        fams_from_indi = set()  # get fam_id from indi records
+        for indi in self.indis.values():
+            #print(f'indi_id: {indi.indi_id}, fam_c: {indi.fam_c}, fam_s: {indi.fam_s}')
+            fams_from_indi.add(indi.fam_c)
+            fams_from_indi.update(indi.fam_s)
+
+        extra_indi = set(self.indis) ^ indi_from_fams  # symmetrical difference of two sets, will always give the difference between 2 sets regardless of the order
+        extra_fams = set(self.fams) ^ fams_from_indi
+
+        if '' in extra_fams:
+            extra_fams.remove('')
+        if '' in extra_indi:
+            extra_indi.remove('')
+
+        if extra_indi:  # individual entry doesn't match
+            self.msg_collections['err']['msg_container']['US26']['tokens'].append(
+                ('Individual', ', '.join(extra_indi))
+            )
+        
+        if extra_fams:  # family entry doesn't match
+            self.msg_collections['err']['msg_container']['US26']['tokens'].append(
+                ('Family', ', '.join(extra_fams))
+            )
+
+        if debug:
+            return self.msg_collections['err']['msg_container']['US26']['tokens']
+        """fam_collection = self.mongo_instance.get_collection('family')  # handles of MongoDB
         indi_collection = self.mongo_instance.get_collection('individual')
 
         # Following two sets are retrieved respectively from family and individual collections. They should be equal if the entries match.
@@ -886,10 +960,8 @@ class Gedcom:
                 ', '.join(fam_from_fams - fam_from_indi if fam_from_fams - fam_from_indi else fam_from_indi - fam_from_fams),
                 'individual collection' if fam_from_fams - fam_from_indi else 'family collection'
             )
-            self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)
+            self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)"""
 
-        if debug:
-            return self.msg_collections['err']['msg_container']['US26']['tokens']
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -997,7 +1069,7 @@ class Family(Entity):
 def main():
     """ Entrance"""
 
-    gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged')
+    gdm = Gedcom('./GEDCOM_files/huge_no_error.ged')
     # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
 
     # keep the three following lines for the Mongo, we may use this later.
@@ -1006,7 +1078,12 @@ def main():
     mongo_instance.drop_collection("individual")
     gdm.insert_to_mongo()
     # mongo_instance.delete_database()
-    
+
+    gdm.us01_date_validate()
+
+    gdm.pretty_print()
+    gdm.msg_print()
+
     """ User Stories for the Spint2 """
     # Javer
     #gdm.us14_multi_birt_less_than_5()
