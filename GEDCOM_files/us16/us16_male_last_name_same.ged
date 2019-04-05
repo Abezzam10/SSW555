@@ -1,0 +1,48 @@
+0 HEAD
+1 SOUR Family Echo
+2 WWW http://www.familyecho.com/
+1 FILE us16_male_last_name_same
+1 DATE 5 APR 2019
+1 DEST ANSTFILE
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 SUBM @I2@
+2 NAME Benjamin
+1 SUBN
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Wife /ForTest/
+2 GIVN Wife
+2 SURN ForTest
+2 _MARNM ForTest
+1 SEX F
+1 BIRT
+2 DATE 1 JAN 1994
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Root /LastName/
+2 GIVN Root
+2 SURN LastName
+2 _MARNM LastName
+1 SEX M
+1 BIRT
+2 DATE 1 JAN 1994
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Same /LastName/
+2 GIVN Same
+2 SURN LastName
+2 _MARNM LastName
+1 SEX M
+1 BIRT
+2 DATE 1 JAN 2019
+1 FAMC @F1@
+0 @F1@ FAM
+1 HUSB @I2@
+1 WIFE @I1@
+1 CHIL @I3@
+1 MARR
+2 DATE 1 JAN 2017
+1 _CURRENT Y
+0 TRLR
