@@ -81,7 +81,7 @@ class Gedcom:
                     },
 
                     'US23': {
-                        'fmt_msg': 'The individual {} and {} does not have a unique name/birth date!.',
+                        'fmt_msg': 'The individual {} and {} have a duplicate name and birth date!.',
                         'tokens': []  # tokens[i] = (indi_id, name, age)
                     },
 
@@ -116,11 +116,6 @@ class Gedcom:
                     },
 
                     'US29': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
-                    },
-
-                    'US17': {
                         'fmt_msg': '',
                         'tokens': []  # tokens[i] = 
                     },
@@ -164,7 +159,13 @@ class Gedcom:
                     'US13': {
                         'fmt_msg': '{} with id: {} and {} with id : {} are siblings and their birth dates are {} days apart.',
                         'tokens': []     #tokens[i] = (sibling1_name, sibling1_id, sibling2_name, sibling2_id, difference of birth date in days)
-                    }
+                    },
+                    
+                    'US17': {
+                        'fmt_msg': 'Individual {} and {} are parent and child but they marry in family {}!',
+                        'tokens': []  # tokens[i] = (parent_id, child_id, parent_fam_s, parent_child_s)
+                    },
+
                 }
             }
         }
@@ -896,6 +897,26 @@ class Gedcom:
             US23: Unique name and birth date
             <No more than one individual with the same name and birth date should appear in a GEDCOM file>
         """
+        
+        sorted_inid_id = sorted(self.indis)
+        # with a sorted ID, traverse the individuals and compare the name of current individual to the rest of the people
+
+        for index, indi_id in enumerate(sorted_inid_id):
+            curr_indi_name, curr_indi_birt = self.indis[indi_id].name, self.indis[indi_id].birt_dt
+            for another_id in sorted_inid_id[index + 1:]:
+                another_indi_name, another_indi_birt = self.indis[another_id].name, self.indis[indi_id].birt_dt
+                if curr_indi_name == another_indi_name and curr_indi_birt == another_indi_birt:
+                    self.msg_collections['err']['msg_container']['US23']['tokens'].append(
+                        (
+                            indi_id,
+                            another_id
+                        )
+                    )
+        
+        if debug:
+            return self.msg_collections['err']['msg_container']['US23']['tokens']
+
+        """
         flag = True
         for people in self.indis.values():
             if people.birt_dt is None:
@@ -921,10 +942,7 @@ class Gedcom:
                                     people.indi_id, people2.indi_id
                                 )
                             )
-                            flag = False
-                            
-        if debug:
-            return self.msg_collections['err']['msg_container']['US23']['tokens']
+                            flag = False"""
 
     def us26_corrspnding_entries(self, debug=False):
         """ Benji, March 24th, 2019
@@ -1007,7 +1025,7 @@ class Gedcom:
             US19: 
         """
         pass
-    
+
     def us29_list_deceased(self, debug=False):
         """ John, date???
             US29: 
@@ -1015,10 +1033,20 @@ class Gedcom:
         pass
 
     def us17_no_marriages_to_children(self, debug=False):
-        """ Benji, date???
-            US17: 
+        """ Benji, Apr 6th, 2019
+            US17: No Marriage to Children
         """
-        pass
+        couples = {(fam.husb_id, fam.wife_id): fam.fam_id for fam in self.fams.values()}  # a map from husb_id and wife_id to fam_id
+
+        for indi in self.indis.values():
+            children = self._find_children(indi)
+            for child in children:
+                if (indi.indi_id, child.indi_id) in couples:
+                    self.msg_collections['anomaly']['msg_container']['US17']['tokens'].append(
+                        (indi.indi_id, child.indi_id, couples[(indi.indi_id, child.indi_id)])
+                    )
+        if debug:
+            return self.msg_collections['anomaly']['msg_container']['US17']['tokens']
     
     def us28_order_siblings_by_age(self, debug=False):
         """ Benji, date???

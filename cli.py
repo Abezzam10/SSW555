@@ -35,4 +35,6 @@ def gedcom(gedfile):
     ged.us13_sibling_spacing()
     ged.us23_unique_name_and_birt()
 
+    ged.us17_no_marriages_to_children()
+
     ged.msg_print()
