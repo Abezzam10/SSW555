@@ -17,17 +17,13 @@ class test_us23(unittest.TestCase):
     def test_same_name(self):
         """ Two individuals have same name"""
         ged = Gedcom('./GEDCOM_files/us23/same_name.ged')
-        expected = [
-            ('@I1@', '@I2@')
-        ]
+        expected = []
         self.assertEqual(ged.us23_unique_name_and_birt(debug=True), expected)
     
     def test_same_birthdate(self):
         """ Two individuals have same birth date"""
         ged = Gedcom('./GEDCOM_files/us23/same_birthdate.ged')
-        expected = [
-            ('@I3@', '@I4@')
-        ]
+        expected = []
         self.assertEqual(ged.us23_unique_name_and_birt(debug=True), expected)
     
     def test_same_name_birthdate(self):

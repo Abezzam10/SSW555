@@ -368,6 +368,10 @@ class Gedcom:
                         self.msg_collections[cat]['msg_container'][us_id]['fmt_msg'].format(*token)
                     )
 
+    def _get_family_name(self, fam_id):
+        """Get the family name from the husband's last name of given family ID."""
+        return self.indis[self.fams[fam_id].husb_id].name['last']
+
     """ ----------------------------------------- """
     """                                           """
     """ User Stories' methods listed as following """
@@ -903,9 +907,13 @@ class Gedcom:
 
         for index, indi_id in enumerate(sorted_inid_id):
             curr_indi_name, curr_indi_birt = self.indis[indi_id].name, self.indis[indi_id].birt_dt
+
             for another_id in sorted_inid_id[index + 1:]:
-                another_indi_name, another_indi_birt = self.indis[another_id].name, self.indis[indi_id].birt_dt
+                another_indi_name, another_indi_birt = self.indis[another_id].name, self.indis[another_id].birt_dt
+
                 if curr_indi_name == another_indi_name and curr_indi_birt == another_indi_birt:
+                    #print(f'   curr_id: {indi_id}, curr_name: {curr_indi_name}, curr_birt: {curr_indi_birt}')
+                    #print(f'another_id: {another_id}, another_name: {another_indi_name}, another_birt: {another_indi_birt}')
                     self.msg_collections['err']['msg_container']['US23']['tokens'].append(
                         (
                             indi_id,
@@ -1049,10 +1057,20 @@ class Gedcom:
             return self.msg_collections['anomaly']['msg_container']['US17']['tokens']
     
     def us28_order_siblings_by_age(self, debug=False):
-        """ Benji, date???
-            US28: 
+        """ Benji, Apr 6th, 2019
+            US28: Order Siblings By Age
         """
-        pass
+        sorted_siblings = {}  # key: fam_id, value: [(sib_id, sib_age, sib_first_name),] -> all sorted
+        for fam_id, fam in self.fams.items():
+            sorted_sib_ids = sorted(fam.chil_id, key=lambda child: (self.indis[child].age, self.indis[child].name['first'], child), reverse=True)  # sort by age first, first name second, indi_id if previous two are all the same
+            sorted_siblings[(fam_id, self._get_family_name(fam_id))] = [(child, self.indis[child].age, self.indis[child].name['first']) for child in sorted_sib_ids]
+
+        if debug:
+            return sorted_siblings
+        else:  # print the sorted table
+            for (fam_id, fam_nm), data in sorted_siblings.items():
+                print(f'---------Family ID: {fam_id} | Family Name: {fam_nm}---------')
+                print(tabulate(data, headers=('Individual ID', 'Age', 'First Name'), tablefmt='fancy_grid', showindex='always'))
 
     def us18_siblings_should_not_marry(self, debug=False):
         """ Ray, date???
@@ -1185,7 +1203,7 @@ class Family(Entity):
 def main():
     """ Entrance"""
 
-    gdm = Gedcom('./GEDCOM_files/huge_no_error.ged')
+    gdm = Gedcom('./GEDCOM_files/us23/same_birthdate.ged')
     # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
 
     # keep the three following lines for the Mongo, we may use this later.
@@ -1195,7 +1213,7 @@ def main():
     gdm.insert_to_mongo()
     # mongo_instance.delete_database()
 
-    gdm.us01_date_validate()
+    gdm.us23_unique_name_and_birt(debug=True)
 
     gdm.pretty_print()
     gdm.msg_print()
