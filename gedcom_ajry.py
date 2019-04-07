@@ -1044,7 +1044,7 @@ class Gedcom:
                             )]
                         )
         self.msg_collections['anomaly']['msg_container']['US19']['tokens'].extend(msg_set)
-        
+
         if debug:
             return self.msg_collections['anomaly']['msg_container']['US19']['tokens']
 
@@ -1053,16 +1053,16 @@ class Gedcom:
         """ John, 7th April 2019
             US29 : List all deceased individuals in a GEDCOM file
         """
-        deceased_list = {}
+        deceased_info = {}
         for indi in self.indis.values():
             if indi.deat_dt:
-               deceased_list[indi.indi_id]= ' '.join((indi.name['first'], indi.name['last']))
+               deceased_info[indi.indi_id]= ' '.join((indi.name['first'], indi.name['last']))
 
         if debug:
-            return deceased_list
+            return deceased_info
         else:
             print("------Deceased------")
-            for key, value in deceased_list.items():
+            for key, value in deceased_info.items():
                 print(f'Individual id: {key}, Name: {value}')
 
     def us17_no_marriages_to_children(self, debug=False):
@@ -1228,7 +1228,7 @@ class Family(Entity):
 def main():
     """ Entrance"""
 
-    gdm = Gedcom('./GEDCOM_files/us19/first_cousins_married.ged')
+    gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
     # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
 
     # keep the three following lines for the Mongo, we may use this later.
@@ -1238,13 +1238,10 @@ def main():
     gdm.insert_to_mongo()
     # mongo_instance.delete_database()
 
-#    gdm.us23_unique_name_and_birt(debug=True)
+    #gdm.us23_unique_name_and_birt(debug=True)
     
     gdm.pretty_print()
-    gdm.us19_first_cousins_should_not_marry()
-    """ siblings = gdm._find_siblings(gdm.indis["@I2@"])
-    for sibling in siblings:
-        print(sibling.indi_id) """
+    #gdm.us29_list_deceased()
     gdm.msg_print()
 
     """ User Stories for the Spint2 """
