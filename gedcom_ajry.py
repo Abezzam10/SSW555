@@ -126,13 +126,13 @@ class Gedcom:
                     },
 
                     'US18': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
+                        'fmt_msg': 'The siblings {} and {} are married ',
+                        'tokens': []  # tokens[i] = (child1.indi_id and child2.indi_id)
                     },
 
                     'US21': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
+                        'fmt_msg': 'The individual {} does not have corrent role for gender',
+                        'tokens': []  # tokens[i] = (fam.husb_id | fam.wife_id)
                     },
 
                     'US33': {
@@ -179,7 +179,7 @@ class Gedcom:
         if not os.path.isfile(os.path.abspath(self.path)):
             raise OSError(f'Error: {self.path} is not a valid path!')
 
-    def data_parser(self):
+    def data_parser(self): 
         """ open the file from given path and print the analysis of data"""
         try:
             fp = open(self.path, encoding='utf-8')
@@ -1073,16 +1073,45 @@ class Gedcom:
                 print(tabulate(data, headers=('Individual ID', 'Age', 'First Name'), tablefmt='fancy_grid', showindex='always'))
 
     def us18_siblings_should_not_marry(self, debug=False):
-        """ Ray, date???
-            US18: 
+        """ Ray, Apr 7th, 2019,
+            US18: Siblings should not marry
         """
-        pass
+        for child1 in self.indis.values():
+            for child2 in self.indis.values(): 
+                if child1.indi_id != child2.indi_id and child1.fam_c != '' and child1.fam_c == child2.fam_c and child1.fam_s == child2.fam_s:
+                    self.msg_collections['err']['msg_container']['US18']['tokens'].append(
+                        (
+                            child1.indi_id, child2.indi_id
+                        )
+                    )
+        
+        if debug:
+            return self.msg_collections['err']['msg_container']['US18']['tokens']
+                    
     
     def us21_correct_gender_for_role(self, debug=False):
-        """ Ray, date???
-            US21: 
+        """ Ray, Apr 7th, 2019,
+            US21: Correct gender for role
         """
-        pass
+        for fam in self.fams.values():
+            for people in self.indis.values():
+                if people.indi_id == fam.husb_id and people.sex != 'M': 
+                    self.msg_collections['err']['msg_container']['US21']['tokens'].append(
+                        (
+                            fam.husb_id
+                        )
+                    )
+                elif people.indi_id == fam.wife_id and people.sex != 'F': 
+                    self.msg_collections['err']['msg_container']['US21']['tokens'].append(
+                        (
+                            fam.wife_id
+                        )
+                    )
+    
+        if debug:
+            return self.msg_collections['err']['msg_container']['US21']['tokens']
+
+
     
     def us33_list_orphans(self, debug=False):
         """ Javer, date???
@@ -1203,20 +1232,22 @@ class Family(Entity):
 def main():
     """ Entrance"""
 
-    gdm = Gedcom('./GEDCOM_files/us23/same_birthdate.ged')
+    gdm = Gedcom('./GEDCOM_files/us18/test_siblings_married.ged')
     # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
 
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
     mongo_instance.drop_collection("family")
     mongo_instance.drop_collection("individual")
-    gdm.insert_to_mongo()
+    gdm.insert_to_mongo() 
     # mongo_instance.delete_database()
 
-    gdm.us23_unique_name_and_birt(debug=True)
+    # gdm.us23_unique_name_and_birt(debug=True)
 
-    gdm.pretty_print()
-    gdm.msg_print()
+    gdm.us18_siblings_should_not_marry()
+
+    # gdm.pretty_print()
+    # gdm.msg_print()
 
     """ User Stories for the Spint2 """
     # Javer
