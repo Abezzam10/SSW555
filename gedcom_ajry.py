@@ -110,16 +110,6 @@ class Gedcom:
                         'tokens': []  # tokens[i] = ('husband'|'wife', birt_dt, fam_id, indi_name, indi_id, marr_dt)
                     },
 
-                    'US19': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
-                    },
-
-                    'US29': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
-                    },
-
                     'US28': {
                         'fmt_msg': '',
                         'tokens': []  # tokens[i] = 
@@ -166,6 +156,10 @@ class Gedcom:
                         'tokens': []  # tokens[i] = (parent_id, child_id, parent_fam_s, parent_child_s)
                     },
 
+                    'US19': {
+                        'fmt_msg': 'Individual {} with id {} is married to {} with id {} who is a first cousin.',
+                        'tokens': []  # tokens[i] = (indi_name, indi_id, cousin_name, cousin_id)
+                    },
                 }
             }
         }
@@ -1029,16 +1023,47 @@ class Gedcom:
             self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)"""
 
     def us19_first_cousins_should_not_marry(self, debug=False):
-        """ John, date???
-            US19: 
+        """ John, 7th April 2019
+            US19 : First cousins should not marry one another
         """
-        pass
+        msg_set = set()
+        for indi in self.indis.values():
+            indichildren = self._find_children(indi)
+            siblings = self._find_siblings(indi)
+            for sibling in siblings:
+                siblingchildren = self._find_children(sibling)
+                for indichild in indichildren:
+                    for siblingchild in siblingchildren:
+                        if ((indichild.fam_s & siblingchild.fam_s) and (indichild.indi_id != siblingchild.indi_id)):
+                            msg_set.update(
+                            [(
+                                ' '.join((indichild.name['first'], indichild.name['last'])),
+                                indichild.indi_id,
+                                ' '.join((siblingchild.name['first'], siblingchild.name['last'])),
+                                siblingchild.indi_id
+                            )]
+                        )
+        self.msg_collections['anomaly']['msg_container']['US19']['tokens'].extend(msg_set)
+        
+        if debug:
+            return self.msg_collections['anomaly']['msg_container']['US19']['tokens']
+
 
     def us29_list_deceased(self, debug=False):
-        """ John, date???
-            US29: 
+        """ John, 7th April 2019
+            US29 : List all deceased individuals in a GEDCOM file
         """
-        pass
+        deceased_list = {}
+        for indi in self.indis.values():
+            if indi.deat_dt:
+               deceased_list[indi.indi_id]= ' '.join((indi.name['first'], indi.name['last']))
+
+        if debug:
+            return deceased_list
+        else:
+            print("------Deceased------")
+            for key, value in deceased_list.items():
+                print(f'Individual id: {key}, Name: {value}')
 
     def us17_no_marriages_to_children(self, debug=False):
         """ Benji, Apr 6th, 2019
@@ -1203,7 +1228,7 @@ class Family(Entity):
 def main():
     """ Entrance"""
 
-    gdm = Gedcom('./GEDCOM_files/us23/same_birthdate.ged')
+    gdm = Gedcom('./GEDCOM_files/us19/first_cousins_married.ged')
     # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
 
     # keep the three following lines for the Mongo, we may use this later.
@@ -1213,9 +1238,13 @@ def main():
     gdm.insert_to_mongo()
     # mongo_instance.delete_database()
 
-    gdm.us23_unique_name_and_birt(debug=True)
-
+#    gdm.us23_unique_name_and_birt(debug=True)
+    
     gdm.pretty_print()
+    gdm.us19_first_cousins_should_not_marry()
+    """ siblings = gdm._find_siblings(gdm.indis["@I2@"])
+    for sibling in siblings:
+        print(sibling.indi_id) """
     gdm.msg_print()
 
     """ User Stories for the Spint2 """
