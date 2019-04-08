@@ -12,7 +12,7 @@ class test_us33(unittest.TestCase):
     def test_list_living_single(self):
         expected = []
         result = Gedcom('./GEDCOM_files/integrated_no_err.ged').us33_list_orphans(debug=True)
-        self.assertEqual(result_ids, expected)
+        self.assertEqual(result, expected)
 
 
 if __name__ == '__main__':

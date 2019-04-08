@@ -15,7 +15,7 @@ class test_us31(unittest.TestCase):
         result_ids = []
         for indi in result:
             result_ids.append(indi.indi_id)
-        self.assertEqual(result_ids, expected)
+        self.assertEqual(result_ids, expected_ids)
 
 if __name__ == '__main__':
     unittest.main(exit=False, verbosity=2)
