@@ -4,6 +4,7 @@ import os
 import re
 from tabulate import tabulate
 from datetime import datetime
+from datetime import date
 from collections import defaultdict
 from mongo_db import MongoDB
 
@@ -1159,17 +1160,54 @@ class Gedcom:
             return self.msg_collections['anomaly']['msg_container']['US21']['tokens']
     
     def us33_list_orphans(self, debug=False):
-        """ Javer, date???
-            US33: 
+        """ Javer, Apr 8
+            US33: List all orphaned children (both parents dead and child < 18 years old) in a GEDCOM filea
         """
-        pass
+        limit_age = 18
+        orphans_list = []
+
+        for fam in self.fams.values():
+            child_id_arr = fam['chil_id']
+            length = len(child_id_arr)
+            if len(child_id_arr) == 0:
+                continue
+
+            husb_id = fam['husb_id']
+            wife_id = fam['wife_id']
+            if self.indis[husb_id]['deat_dt'] == None and self.indis[wife_id]['deat_dt'] == None:
+                for child_id in child_id_arr:
+                    indi = self.indis[child_id]
+                    if indi['deat_dt'] != None:
+                        continue
+                    if indi.age < limit_age:
+                        orphans_list.append(indi)
+
+        if debug:
+            return orphans_list
+        else:
+            if orphans_list:
+                print('---------Orphans List---------')
+                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in orphans_list]
+                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
 
     def us31_list_living_single(self, debug=False):
-        """ Javer, date???
-            US31: 
+        """ Javer, Apr 8
+            US31: List all living people over 30 who have never been married in a GEDCOM file
         """
-        pass
+        living_single_list = []
+        limit_age = 30
 
+        for indi in self.indis.values():
+            if indi.age >= limit_age and len(indi['fam_s']) == 0 and indi['deat_dt'] == None:
+                living_single_list.append(indi)
+
+        if debug:
+            return living_single_list
+        else:
+            if living_single_list:
+                print(f'---------Living Single List---------')
+                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in living_single_list]
+                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -1240,6 +1278,7 @@ class Individual(Entity):
                 self.birt_dt.strftime('%Y-%m-%d'), self.age, True if not self.deat_dt else False, self.deat_dt.strftime('%Y-%m-%d') if self.deat_dt else 'NA', \
                 self.fam_c if self.fam_c else 'NA', ', '.join(self.fam_s) if self.fam_s else 'NA' 
 
+
 class Family(Entity):
     """ Represent the family entity in the GEDCOM file"""
 
@@ -1277,8 +1316,8 @@ class Family(Entity):
 def main():
     """ Entrance"""
 
-    gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
-    # gdm = Gedcom('./GEDCOM_files/integration_all_err.ged')
+    # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
+    gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
 
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
@@ -1289,14 +1328,16 @@ def main():
 
     #gdm.us23_unique_name_and_birt(debug=True)
     
-    gdm.pretty_print()
+    # gdm.pretty_print()
     #gdm.us29_list_deceased()
-    gdm.msg_print()
+    # gdm.msg_print()
 
-    """ User Stories for the Spint2 """
+    """ User Stories for the Spint """
     # Javer
     #gdm.us14_multi_birt_less_than_5()
     # gdm.us16_male_last_name()
+    # gdm.us33_list_orphans()
+    # gdm.us31_list_living_single()
     
     # # John
     # gdm.us03_birth_before_death()
