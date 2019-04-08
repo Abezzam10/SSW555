@@ -17,24 +17,21 @@ class test_us21(unittest.TestCase):
     def test_husb_female(self):
         """ Husband has the gender female"""
         ged = Gedcom('./GEDCOM_files/us21/test_husb_female.ged')
-        expected = [
-            ('@I2@')
-        ]
+        expected = [('Oswaldo Mccarthy', '@I2@', 'husband', '@F1@', 'male')]
         self.assertEqual(ged.us21_correct_gender_for_role(debug=True), expected)
     
     def test_wife_male(self):
         """Wife has the gender male"""
         ged = Gedcom('./GEDCOM_files/us21/test_wife_male.ged')
-        expected = [
-            ('@I3@')
-        ]
+        expected = [('Sherika Ault', '@I3@', 'wife', '@F1@', 'female')]
         self.assertEqual(ged.us21_correct_gender_for_role(debug=True), expected)
     
     def test_wife_male_husb_female(self):
         """Wife has the gender male and husband has gender female"""
         ged = Gedcom('./GEDCOM_files/us21/test_wife_male_husb_female.ged')
         expected = [
-            '@I2@', '@I3@'
+            ('Oswaldo Mccarthy', '@I2@', 'husband', '@F1@', 'male'),
+            ('Sherika Ault', '@I3@', 'wife', '@F1@', 'female')
         ]
         self.assertEqual(ged.us21_correct_gender_for_role(debug=True), expected)
     

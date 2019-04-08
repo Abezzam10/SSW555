@@ -126,13 +126,8 @@ class Gedcom:
                     },
 
                     'US18': {
-                        'fmt_msg': 'The siblings {} and {} are married ',
-                        'tokens': []  # tokens[i] = (child1.indi_id and child2.indi_id)
-                    },
-
-                    'US21': {
-                        'fmt_msg': 'The individual {} does not have corrent role for gender',
-                        'tokens': []  # tokens[i] = (fam.husb_id | fam.wife_id)
+                        'fmt_msg': 'Individuals {} and {} are siblings and they marry!',
+                        'tokens': []  # tokens[i] = (child.indi_id, sibling.indi_id)
                     },
 
                     'US33': {
@@ -150,6 +145,12 @@ class Gedcom:
             'anomaly': {
                 'header': 'Anomaly {}: ',
                 'msg_container': {
+
+                    'US21': {
+                        'fmt_msg': '{}({}), the {} of {}, is not a {}...',
+                        'tokens': []  # tokens[i] = (indi.name, indi_id, 'husband'|'wife', fam_id, 'male'|'female')
+                    },
+
 
                     'US20': {
                         'fmt_msg': 'The child of {0}({1}), {2}({3}), is married with the sibling of {0}, {4}({5})',
@@ -1076,22 +1077,25 @@ class Gedcom:
         """ Ray, Apr 7th, 2019,
             US18: Siblings should not marry
         """
-        for child1 in self.indis.values():
-            for child2 in self.indis.values(): 
-                if child1.indi_id != child2.indi_id and child1.fam_c != '' and child1.fam_c == child2.fam_c and child1.fam_s == child2.fam_s:
-                    self.msg_collections['err']['msg_container']['US18']['tokens'].append(
-                        (
-                            child1.indi_id, child2.indi_id
-                        )
-                    )
+
+        for fam in self.fams.values():
+            if len(fam.chil_id) > 1:  # have multiple children
+                siblings = [self.indis[child] for child in sorted(fam.chil_id) if child in self.indis]
+
+                for index, indi in enumerate(siblings):
+                    for sib in siblings[index + 1: ]:
+                        if indi.fam_s & sib.fam_s:
+                            self.msg_collections['err']['msg_container']['US18']['tokens'].append(
+                                (indi.indi_id, sib.indi_id)
+                            )
         
         if debug:
             return self.msg_collections['err']['msg_container']['US18']['tokens']
-                    
     
     def us21_correct_gender_for_role(self, debug=False):
         """ Ray, Apr 7th, 2019,
             US21: Correct gender for role
+        """
         """
         for fam in self.fams.values():
             for people in self.indis.values():
@@ -1106,10 +1110,22 @@ class Gedcom:
                         (
                             fam.wife_id
                         )
-                    )
-    
+                    )"""
+        for fam_id, fam in self.fams.items():
+            husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]  # get the spouses objects from family
+
+            if husb.sex != 'M':  # husband is not a male
+                self.msg_collections['anomaly']['msg_container']['US21']['tokens'].append(
+                    (' '.join((husb.name['first'], husb.name['last'])), husb.indi_id, 'husband', fam_id, 'male')
+                )
+
+            if wife.sex != 'F':
+                self.msg_collections['anomaly']['msg_container']['US21']['tokens'].append(
+                    (' '.join((wife.name['first'], wife.name['last'])), wife.indi_id, 'wife', fam_id, 'female')
+                )
+
         if debug:
-            return self.msg_collections['err']['msg_container']['US21']['tokens']
+            return self.msg_collections['anomaly']['msg_container']['US21']['tokens']
 
 
     
