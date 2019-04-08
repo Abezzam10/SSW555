@@ -1,5 +1,5 @@
 """ US31: List Living Single
-    Benji, Apr 8, 2019
+    Javer, Apr 8, 2019
 """
 
 import os
@@ -11,7 +11,7 @@ class test_us31(unittest.TestCase):
 
     def test_list_living_single(self):
         expected_ids = ["@I9@", "@I17@", "@I22@", "@I23@"]
-        result = Gedcom('./GEDCOM_files/integrated_no_err.ged').us28_order_siblings_by_age(debug=True)
+        result = Gedcom('./GEDCOM_files/integrated_no_err.ged').us31_list_living_single(debug=True)
         result_ids = []
         for indi in result:
             result_ids.append(indi.indi_id)
