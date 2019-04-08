@@ -15,14 +15,14 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 
 |Story ID|Story Name|Owner|
 |:---:|:---:|:---:|
-|US04|Marriage before divorce|John|
-|US07|Less then 150 years old|Benji|
-|US08|Birth before marriage of parents|Ray|
-|US13|Siblings spacing|John|
-|US14|Multiple births <= 5|Javer|
-|US16|Male last names|Javer|
-|US23|Unique name and birth date|Ray|
-|US26|Corresponding entries|Benji|
+|US17|No marriages to children|Benji|
+|US28|Order siblings by age|Benji|
+|US33|List orphans|Javer|
+|US31|List living single|Javer|
+|US19|First cousins should not marry|John|
+|US29|List deceased|John|
+|US18|Siblings should not marry|Ray|
+|US21|Correct gender for role|Ray|
 
 ---
 
@@ -36,13 +36,25 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
 
 ## 1 Lastest Change of the Code
 
-The major change happens in `gedcom_ajry.py`, changes in unit tests are the result of the change in this python file. Below is the major changes:
+Major changes happens in the `gedcom_ajry.py` for sure, as well as newly added test cases. But more importantly, we have modified the Command Line Interface. Basically we have `gedcom` as a group command and includes the list utilities which are seperated from `detect`.
 
-1. **class `Error` and `Warn` are deleted** for the sake of saving maintanence cost.
-2. Instead of using the deleted classes to print the error/anomaly message, a multi-layered Python dictionary, `self.msg_collection`, is defined in the `Gedcom` object and used for storage of exceptions dctected by the program.
-3. The dictionary is separated in two parts to store errors and anomaly respectively.
-4. The most important part of the dictionary is the `msg_collection['err'|'anomaly']['msg_container']`. It's a dictionary with **user story ID** as keys, and **formatted messages** and **information tokens** as values. Please go to the code and read the `__init__` of `class Gedcom` carefully. ***Noted that developers MUST comment the elements structure of token tuple in every user story container.***
-5. A new method of `class Gedcom`, `msg_print()`, is created to iterate the `msg_colletion` and pretty print the exception messages. The method is written under the assumption that all of the user stories' tokens are collected in a list. Please pay attention to it.
+```shell
+$ gedcom
+Usage: gedcom [OPTIONS] COMMAND [ARGS]...
+
+  Command line interface for SSW 555 GEDCOM file analyzer
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  detect  Pretty print the individuals and family tables and detect errors...
+  us28    US28: Order Siblings by age
+  us29    US29: List deceased people
+  us31    US31: List living single
+  us33    US33: List orphan
+```
+
 
 ## 2 Installation & PyPI
 
