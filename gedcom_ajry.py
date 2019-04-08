@@ -1136,11 +1136,10 @@ class Gedcom:
         if debug:
             return orphans_list
         else:
-            if len(orphans_list) != 0:
-                print(f'---------Orphans List---------')
-            for indi in orphans_list:
-                print(f"Indi_id: {indi.indi_id}, age: {indi.age}, First name: {indi['name']['first']}, Last name: {indi['name']['last']}")
-                
+            if orphans_list:
+                print('---------Orphans List---------')
+                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in orphans_list]
+                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
 
     def us31_list_living_single(self, debug=False):
         """ Javer, Apr 8
@@ -1156,12 +1155,10 @@ class Gedcom:
         if debug:
             return living_single_list
         else:
-            if len(living_single_list) != 0:
+            if living_single_list:
                 print(f'---------Living Single List---------')
-            for indi in living_single_list:
-                print(f"Indi_id: {indi.indi_id}, age: {indi.age}, First name: {indi['name']['first']}, Last name: {indi['name']['last']} has never been married")
-        
-        
+                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in living_single_list]
+                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
