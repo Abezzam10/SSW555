@@ -1125,7 +1125,7 @@ class Gedcom:
 
             husb_id = fam['husb_id']
             wife_id = fam['wife_id']
-            if self.indis[husb_id]['deat_dt'] == None and self.indis[wife_id]['deat_dt'] != None:
+            if self.indis[husb_id]['deat_dt'] == None and self.indis[wife_id]['deat_dt'] == None:
                 for child_id in child_id_arr:
                     indi = self.indis[child_id]
                     if indi['deat_dt'] != None:
@@ -1133,8 +1133,14 @@ class Gedcom:
                     if indi.age < limit_age:
                         orphans_list.append(indi)
 
-        pass
-
+        if debug:
+            return orphans_list
+        else:
+            if len(orphans_list) != 0:
+                print(f'---------Orphans List---------')
+            for indi in orphans_list:
+                print(f"Indi_id: {indi.indi_id}, age: {indi.age}, First name: {indi['name']['first']}, Last name: {indi['name']['last']}")
+                
 
     def us31_list_living_single(self, debug=False):
         """ Javer, Apr 8
@@ -1147,7 +1153,14 @@ class Gedcom:
             if indi.age >= limit_age and len(indi['fam_s']) == 0 and indi['deat_dt'] == None:
                 living_single_list.append(indi)
 
-        pass
+        if debug:
+            return living_single_list
+        else:
+            if len(living_single_list) != 0:
+                print(f'---------Living Single List---------')
+            for indi in living_single_list:
+                print(f"Indi_id: {indi.indi_id}, age: {indi.age}, First name: {indi['name']['first']}, Last name: {indi['name']['last']} has never been married")
+        
         
 
 class Entity:
@@ -1258,7 +1271,7 @@ def main():
     """ Entrance"""
 
     # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
-    gdm = Gedcom('./GEDCOM_files/huge_no_error.ged')
+    gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
 
     # keep the three following lines for the Mongo, we may use this later.
     # mongo_instance = MongoDB()
