@@ -1167,20 +1167,17 @@ class Gedcom:
         orphans_list = []
 
         for fam in self.fams.values():
-            child_id_arr = fam['chil_id']
-            length = len(child_id_arr)
-            if len(child_id_arr) == 0:
-                continue
+            husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]
 
-            husb_id = fam['husb_id']
-            wife_id = fam['wife_id']
-            if self.indis[husb_id]['deat_dt'] == None and self.indis[wife_id]['deat_dt'] == None:
-                for child_id in child_id_arr:
-                    indi = self.indis[child_id]
-                    if indi['deat_dt'] != None:
-                        continue
-                    if indi.age < limit_age:
-                        orphans_list.append(indi)
+            if husb.deat_dt and wife.deat_dt:  # both parents died
+                children = [self.indis[child] for child in fam.chil_id if child in self.indis]
+
+                for child in children:
+                    age_turn_orph_dt = max(husb.deat_dt, wife.deat_dt) - child.birt_dt
+                    age_turn_orph = (age_turn_orph_dt.days + age_turn_orph_dt.seconds // 86400) // 365  # get the age of child when turn orphan
+
+                    if age_turn_orph <= limit_age:
+                        orphans_list.append(child)
 
         if debug:
             return orphans_list

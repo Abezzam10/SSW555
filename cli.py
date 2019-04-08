@@ -55,3 +55,16 @@ def us28(gedfile):
 def us29(gedfile):
     """US29: List deceased people"""
     Gedcom(gedfile).us29_list_deceased()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us31(gedfile):
+    """US31: List living single"""
+    Gedcom(gedfile).us31_list_living_single()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us33(gedfile):
+    """US33: List orphan"""
+    Gedcom(gedfile).us33_list_orphans()
+    
