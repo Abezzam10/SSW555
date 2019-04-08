@@ -1091,15 +1091,18 @@ class Gedcom:
         """
         sorted_siblings = {}  # key: fam_id, value: [(sib_id, sib_age, sib_first_name),] -> all sorted
         for fam_id, fam in self.fams.items():
-            sorted_sib_ids = sorted(fam.chil_id, key=lambda child: (self.indis[child].age, self.indis[child].name['first'], child), reverse=True)  # sort by age first, first name second, indi_id if previous two are all the same
+            sib_ids = [child for child in fam.chil_id if child in self.indis]
+            sorted_sib_ids = sorted(sib_ids, key=lambda child: (self.indis[child].age, self.indis[child].name['first'], child), reverse=True)  # sort by age first, first name second, indi_id if previous two are all the same
             sorted_siblings[(fam_id, self._get_family_name(fam_id))] = [(child, self.indis[child].age, self.indis[child].name['first']) for child in sorted_sib_ids]
 
         if debug:
             return sorted_siblings
         else:  # print the sorted table
             for (fam_id, fam_nm), data in sorted_siblings.items():
+                if not data:
+                    continue
                 print(f'---------Family ID: {fam_id} | Family Name: {fam_nm}---------')
-                print(tabulate(data, headers=('Individual ID', 'Age', 'First Name'), tablefmt='fancy_grid', showindex='always'))
+                print(tabulate(data, headers=('Individual ID', 'Age', 'First Name'), tablefmt='fancy_grid', showindex='always'), '\n')
 
     def us18_siblings_should_not_marry(self, debug=False):
         """ Ray, Apr 7th, 2019,
