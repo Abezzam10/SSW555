@@ -1053,7 +1053,6 @@ class Gedcom:
         if debug:
             return self.msg_collections['anomaly']['msg_container']['US19']['tokens']
 
-
     def us29_list_deceased(self, debug=False):
         """ John, 7th April 2019
             US29 : List all deceased individuals in a GEDCOM file
@@ -1067,8 +1066,8 @@ class Gedcom:
             return deceased_info
         else:
             print("------Deceased------")
-            for key, value in deceased_info.items():
-                print(f'Individual id: {key}, Name: {value}')
+            data = [(indi_id, name) for indi_id, name in deceased_info.items()]
+            print(tabulate(data, headers=('Individual ID', 'Name'), tablefmt='fancy_grid', showindex='always'))
 
     def us17_no_marriages_to_children(self, debug=False):
         """ Benji, Apr 6th, 2019
@@ -1155,8 +1154,6 @@ class Gedcom:
 
         if debug:
             return self.msg_collections['anomaly']['msg_container']['US21']['tokens']
-
-
     
     def us33_list_orphans(self, debug=False):
         """ Javer, date???
@@ -1169,7 +1166,7 @@ class Gedcom:
             US31: 
         """
         pass
-        
+
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
