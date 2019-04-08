@@ -37,4 +37,8 @@ def gedcom(gedfile):
 
     ged.us17_no_marriages_to_children()
 
+    ged.us18_siblings_should_not_marry()
+    ged.us19_first_cousins_should_not_marry()
+    ged.us21_correct_gender_for_role()
+
     ged.msg_print()

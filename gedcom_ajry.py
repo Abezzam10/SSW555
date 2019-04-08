@@ -713,6 +713,7 @@ class Gedcom:
             <Children should be born after marriage of parents (and not more than 9 months after their divorce)>
         """
 
+        """
         for fam in self.fams.values():
             if fam.div_dt is None: 
                 for child_id in fam.chil_id:
@@ -733,7 +734,17 @@ class Gedcom:
                                     (
                                         fam.fam_id, fam.husb_id, fam.wife_id
                                     )
-                                )
+                                )"""
+        for fam_id, fam in self.fams.items():
+            for child in [self.indis[indi_id] for indi_id in fam.chil_id if indi_id in self.indis]:
+                if child.birt_dt < fam.marr_dt:  # child birth date earlier than parents' marriage date
+                    self.msg_collections['err']['msg_container']['US08']['tokens'].append(
+                        (fam_id, fam.husb_id, fam.wife_id)
+                    )
+                if fam.div_dt is not None and (child.birt_dt - fam.div_dt).days > 274:  # spouses divorced and the child born after 9 months of divorces
+                    self.msg_collections['err']['msg_container']['US08']['tokens'].append(
+                        (fam_id, fam.husb_id, fam.wife_id)
+                    )
 
         if debug:
             return self.msg_collections['err']['msg_container']['US08']['tokens']
@@ -989,60 +1000,52 @@ class Gedcom:
 
         if debug:
             return self.msg_collections['err']['msg_container']['US26']['tokens']
-        """fam_collection = self.mongo_instance.get_collection('family')  # handles of MongoDB
-        indi_collection = self.mongo_instance.get_collection('individual')
-
-        # Following two sets are retrieved respectively from family and individual collections. They should be equal if the entries match.
-        indi_from_fams = {member['indi_id'] for doc in fam_collection.find({}, {'members': 1}) for member in doc['members'] if member['indi_id']}
-        indi_from_indi = {doc['indi_id'] for doc in indi_collection.find({}, {'indi_id': 1}) if doc['indi_id']}
-
-        # Same as above, but it's for family id check
-        fam_from_fams = {doc['fam_id'] for doc in fam_collection.find({}, {'fam_id': 1}) if doc['fam_id']}
-        fam_from_indi = set(
-            [doc['child_of_family'] for doc in indi_collection.find({}, {'child_of_family': 1}) if doc['child_of_family']] +\
-            [fam_s for doc in indi_collection.find({}, {'spous_of_family': 1}) for fam_s in doc['spous_of_family'] if fam_s]
-        )
-
-        #print(f'indi_from_fams: {indi_from_fams}\nindi_from_indi: {indi_from_indi}')
-        #print(f'fam_from_fams: {fam_from_fams}\nfam_from_indi: {fam_from_indi}')
-
-        if indi_from_fams != indi_from_indi:
-            token = (
-                'Individuals',
-                ', '.join(indi_from_fams - indi_from_indi if indi_from_fams - indi_from_indi else indi_from_indi - indi_from_fams),
-                'individual collection' if indi_from_fams - indi_from_indi else 'family collection'
-            )
-            self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)
-
-        if fam_from_fams != fam_from_indi:
-            token = (
-                'Families',
-                ', '.join(fam_from_fams - fam_from_indi if fam_from_fams - fam_from_indi else fam_from_indi - fam_from_fams),
-                'individual collection' if fam_from_fams - fam_from_indi else 'family collection'
-            )
-            self.msg_collections['err']['msg_container']['US26']['tokens'].append(token)"""
 
     def us19_first_cousins_should_not_marry(self, debug=False):
         """ John, 7th April 2019
             US19 : First cousins should not marry one another
         """
-        msg_set = set()
+        """
         for indi in self.indis.values():
-            indichildren = self._find_children(indi)
+            indi_children = self._find_children(indi)
             siblings = self._find_siblings(indi)
             for sibling in siblings:
-                siblingchildren = self._find_children(sibling)
-                for indichild in indichildren:
-                    for siblingchild in siblingchildren:
-                        if ((indichild.fam_s & siblingchild.fam_s) and (indichild.indi_id != siblingchild.indi_id)):
+                sibling_children = self._find_children(sibling)
+                for indi_child in indi_children:
+                    for sibling_child in sibling_children:
+                        if (indi_child.fam_s & sibling_child.fam_s) and (indi_child.indi_id != sibling_child.indi_id):
                             msg_set.update(
                             [(
-                                ' '.join((indichild.name['first'], indichild.name['last'])),
-                                indichild.indi_id,
-                                ' '.join((siblingchild.name['first'], siblingchild.name['last'])),
-                                siblingchild.indi_id
+                                ' '.join((indi_child.name['first'], indi_child.name['last'])),
+                                indi_child.indi_id,
+                                ' '.join((sibling_child.name['first'], sibling_child.name['last'])),
+                                sibling_child.indi_id
                             )]
                         )
+        """
+        msg_set = set()
+
+        for fam in self.fams.values():
+            if len(fam.chil_id) > 1:  # multi children exist
+                siblings = [self.indis[sib] for sib in fam.chil_id if sib in self.indis]  # get all siblings out
+
+                for index, indi in enumerate(siblings):  # for each indi check indi's children and sib's children see if they have the same fam_s
+                    indi_children = self._find_children(indi)
+                    for sib in siblings[index + 1: ]:
+                        sib_children = self._find_children(sib)
+                        
+                        for indi_child in indi_children:
+                            for sib_child in sib_children:
+                                if indi_child.fam_s & sib_child.fam_s:
+                                    msg_set.update(
+                                        [(
+                                            ' '.join((indi_child.name['first'], indi_child.name['last'])),
+                                            indi_child.indi_id,
+                                            ' '.join((sib_child.name['first'], sib_child.name['last'])),
+                                            sib_child.indi_id
+                                        )]
+                                    )
+
         self.msg_collections['anomaly']['msg_container']['US19']['tokens'].extend(msg_set)
 
         if debug:
