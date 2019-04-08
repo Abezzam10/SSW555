@@ -115,11 +115,6 @@ class Gedcom:
                         'tokens': []  # tokens[i] = 
                     },
 
-                    'US18': {
-                        'fmt_msg': 'Individuals {} and {} are siblings and they marry!',
-                        'tokens': []  # tokens[i] = (child.indi_id, sibling.indi_id)
-                    },
-
                     'US33': {
                         'fmt_msg': '',
                         'tokens': []  # tokens[i] = 
@@ -135,6 +130,12 @@ class Gedcom:
             'anomaly': {
                 'header': 'Anomaly {}: ',
                 'msg_container': {
+
+                    'US18': {
+                        'fmt_msg': 'Individuals {} and {} are siblings and they marry!',
+                        'tokens': []  # tokens[i] = (child.indi_id, sibling.indi_id)
+                    },
+
 
                     'US21': {
                         'fmt_msg': '{}({}), the {} of {}, is not a {}...',
@@ -1113,12 +1114,12 @@ class Gedcom:
                 for index, indi in enumerate(siblings):
                     for sib in siblings[index + 1: ]:
                         if indi.fam_s & sib.fam_s:
-                            self.msg_collections['err']['msg_container']['US18']['tokens'].append(
+                            self.msg_collections['anomaly']['msg_container']['US18']['tokens'].append(
                                 (indi.indi_id, sib.indi_id)
                             )
         
         if debug:
-            return self.msg_collections['err']['msg_container']['US18']['tokens']
+            return self.msg_collections['anomaly']['msg_container']['US18']['tokens']
     
     def us21_correct_gender_for_role(self, debug=False):
         """ Ray, Apr 7th, 2019,
