@@ -116,13 +116,8 @@ class Gedcom:
                     },
 
                     'US18': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
-                    },
-
-                    'US21': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
+                        'fmt_msg': 'Individuals {} and {} are siblings and they marry!',
+                        'tokens': []  # tokens[i] = (child.indi_id, sibling.indi_id)
                     },
 
                     'US33': {
@@ -140,6 +135,12 @@ class Gedcom:
             'anomaly': {
                 'header': 'Anomaly {}: ',
                 'msg_container': {
+
+                    'US21': {
+                        'fmt_msg': '{}({}), the {} of {}, is not a {}...',
+                        'tokens': []  # tokens[i] = (indi.name, indi_id, 'husband'|'wife', fam_id, 'male'|'female')
+                    },
+
 
                     'US20': {
                         'fmt_msg': 'The child of {0}({1}), {2}({3}), is married with the sibling of {0}, {4}({5})',
@@ -173,7 +174,7 @@ class Gedcom:
         if not os.path.isfile(os.path.abspath(self.path)):
             raise OSError(f'Error: {self.path} is not a valid path!')
 
-    def data_parser(self):
+    def data_parser(self): 
         """ open the file from given path and print the analysis of data"""
         try:
             fp = open(self.path, encoding='utf-8')
@@ -1101,16 +1102,60 @@ class Gedcom:
                 print(tabulate(data, headers=('Individual ID', 'Age', 'First Name'), tablefmt='fancy_grid', showindex='always'))
 
     def us18_siblings_should_not_marry(self, debug=False):
-        """ Ray, date???
-            US18: 
+        """ Ray, Apr 7th, 2019,
+            US18: Siblings should not marry
         """
-        pass
+
+        for fam in self.fams.values():
+            if len(fam.chil_id) > 1:  # have multiple children
+                siblings = [self.indis[child] for child in sorted(fam.chil_id) if child in self.indis]
+
+                for index, indi in enumerate(siblings):
+                    for sib in siblings[index + 1: ]:
+                        if indi.fam_s & sib.fam_s:
+                            self.msg_collections['err']['msg_container']['US18']['tokens'].append(
+                                (indi.indi_id, sib.indi_id)
+                            )
+        
+        if debug:
+            return self.msg_collections['err']['msg_container']['US18']['tokens']
     
     def us21_correct_gender_for_role(self, debug=False):
-        """ Ray, date???
-            US21: 
+        """ Ray, Apr 7th, 2019,
+            US21: Correct gender for role
         """
-        pass
+        """
+        for fam in self.fams.values():
+            for people in self.indis.values():
+                if people.indi_id == fam.husb_id and people.sex != 'M': 
+                    self.msg_collections['err']['msg_container']['US21']['tokens'].append(
+                        (
+                            fam.husb_id
+                        )
+                    )
+                elif people.indi_id == fam.wife_id and people.sex != 'F': 
+                    self.msg_collections['err']['msg_container']['US21']['tokens'].append(
+                        (
+                            fam.wife_id
+                        )
+                    )"""
+        for fam_id, fam in self.fams.items():
+            husb, wife = self.indis[fam.husb_id], self.indis[fam.wife_id]  # get the spouses objects from family
+
+            if husb.sex != 'M':  # husband is not a male
+                self.msg_collections['anomaly']['msg_container']['US21']['tokens'].append(
+                    (' '.join((husb.name['first'], husb.name['last'])), husb.indi_id, 'husband', fam_id, 'male')
+                )
+
+            if wife.sex != 'F':
+                self.msg_collections['anomaly']['msg_container']['US21']['tokens'].append(
+                    (' '.join((wife.name['first'], wife.name['last'])), wife.indi_id, 'wife', fam_id, 'female')
+                )
+
+        if debug:
+            return self.msg_collections['anomaly']['msg_container']['US21']['tokens']
+
+
     
     def us33_list_orphans(self, debug=False):
         """ Javer, date???
@@ -1238,7 +1283,7 @@ def main():
     mongo_instance = MongoDB()
     mongo_instance.drop_collection("family")
     mongo_instance.drop_collection("individual")
-    gdm.insert_to_mongo()
+    gdm.insert_to_mongo() 
     # mongo_instance.delete_database()
 
     #gdm.us23_unique_name_and_birt(debug=True)
