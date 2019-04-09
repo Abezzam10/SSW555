@@ -11,18 +11,18 @@ This is a project for the SSW555 of Stevens Institute of Technology taught by ge
   - Aniruddha Pimple(John)
   - Jiahua Zhou(Javer)
 
-- **User stories for sprint 2**:
+- **User stories for sprint 4**:
 
 |Story ID|Story Name|Owner|
 |:---:|:---:|:---:|
-|US17|No marriages to children|Benji|
-|US28|Order siblings by age|Benji|
-|US33|List orphans|Javer|
-|US31|List living single|Javer|
-|US19|First cousins should not marry|John|
-|US29|List deceased|John|
-|US18|Siblings should not marry|Ray|
-|US21|Correct gender for role|Ray|
+|US32|List multiple births|Ray|
+|US34|List large age differences|John|
+|US35|List recent births|Javer|
+|US36|List recent deaths|Javer|
+|US37|List recent survivors|John|
+|US39|List upcoming anniversaries|Ray|
+|US40|Include input line numbers|Benji|
+|US42|Reject illegitimate dates|Benji|
 
 ---
 
