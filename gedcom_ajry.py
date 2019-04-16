@@ -796,13 +796,24 @@ class Gedcom:
         """
         for fam_id, fam in self.fams.items():
             if len(fam.chil_id) > 5:
-                self.msg_collections['err']['msg_container']['US14']['tokens'].append(
-                    (
-                        fam_id,
-                        5,
-                        len(fam.chil_id)
+                birth_dict = {}
+                for indi_id in fam.chil_id:
+                    tmp_birth_date = self.indis[indi_id].birt_dt.strftime("%Y%d%m")
+                    if tmp_birth_date not in birth_dict.keys():
+                        birth_dict[tmp_birth_date] = []
+                        birth_dict[tmp_birth_date].append(indi_id)
+                    else:
+                        birth_dict[tmp_birth_date].append(indi_id)
+                    
+                for birth_date in birth_dict:
+                    if len(birth_dict[birth_date]) > 5:
+                        self.msg_collections['err']['msg_container']['US14']['tokens'].append(
+                        (
+                            fam_id,
+                            5,
+                            len(birth_dict[birth_date])
+                        )
                     )
-                )
 
         if debug:
             return self.msg_collections['err']['msg_container']['US14']['tokens']
@@ -1314,13 +1325,13 @@ def main():
     """ Entrance"""
 
     # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
-    gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
-
+    # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
+    gdm = Gedcom("./GEDCOM_files/us14/us14_multiple_brith_larger_than_5.ged")
     # keep the three following lines for the Mongo, we may use this later.
-    mongo_instance = MongoDB()
-    mongo_instance.drop_collection("family")
-    mongo_instance.drop_collection("individual")
-    gdm.insert_to_mongo() 
+    # mongo_instance = MongoDB()
+    # mongo_instance.drop_collection("family")
+    # mongo_instance.drop_collection("individual")
+    # gdm.insert_to_mongo() 
     # mongo_instance.delete_database()
 
     #gdm.us23_unique_name_and_birt(debug=True)
@@ -1331,7 +1342,7 @@ def main():
 
     """ User Stories for the Spint """
     # Javer
-    #gdm.us14_multi_birt_less_than_5()
+    # gdm.us14_multi_birt_less_than_5(True)
     # gdm.us16_male_last_name()
     # gdm.us33_list_orphans()
     # gdm.us31_list_living_single()
