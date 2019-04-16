@@ -117,8 +117,8 @@ class Gedcom:
                     },
 
                     'US33': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
+                        'fmt_msg': 'The family {}, both parents dead and the children{} less than 18',
+                        'tokens': []  # tokens[i] = (fam_id, inid_id)
                     },
 
                     'US31': {
@@ -1188,15 +1188,17 @@ class Gedcom:
                     age_turn_orph = (age_turn_orph_dt.days + age_turn_orph_dt.seconds // 86400) // 365  # get the age of child when turn orphan
 
                     if age_turn_orph <= limit_age:
-                        orphans_list.append(child)
+                        self.msg_collections['err']['msg_container']['US33']['tokens'].append((fam.fam_id, child.indi_id))
+
 
         if debug:
-            return orphans_list
+            return self.msg_collections['err']['msg_container']['US33']['tokens']
         else:
-            if orphans_list:
+            data = self.msg_collections['err']['msg_container']['US33']['tokens']
+            if data:
                 print('---------Orphans List---------')
-                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in orphans_list]
-                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
+                formated_data = []
+                print(tabulate(data, headers=('Famile ID', 'Individual ID'), tablefmt='fancy_grid', showindex='always'))
 
     def us31_list_living_single(self, debug=False):
         """ Javer, Apr 8
@@ -1326,7 +1328,7 @@ def main():
 
     # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
     # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
-    gdm = Gedcom("./GEDCOM_files/us14/us14_multiple_brith_larger_than_5.ged")
+    gdm = Gedcom('./GEDCOM_files/us33/us33_ophaned_children_less_than_18.ged')
     # keep the three following lines for the Mongo, we may use this later.
     # mongo_instance = MongoDB()
     # mongo_instance.drop_collection("family")
@@ -1344,7 +1346,7 @@ def main():
     # Javer
     # gdm.us14_multi_birt_less_than_5(True)
     # gdm.us16_male_last_name()
-    # gdm.us33_list_orphans()
+    gdm.us33_list_orphans()
     # gdm.us31_list_living_single()
     
     # # John
