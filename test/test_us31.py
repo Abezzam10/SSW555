@@ -10,12 +10,9 @@ class test_us31(unittest.TestCase):
     """ Test cases for US31"""
 
     def test_list_living_single(self):
-        expected_ids = ["@I9@", "@I17@", "@I22@", "@I23@"]
-        result = Gedcom('./GEDCOM_files/integrated_no_err.ged').us31_list_living_single(debug=True)
-        result_ids = []
-        for indi in result:
-            result_ids.append(indi.indi_id)
-        self.assertEqual(result_ids, expected_ids)
+        expected_ids = ['@I1@', '@I11@', '@I12@', '@I17@']
+        result = Gedcom('./GEDCOM_files/us31/us31_living_single_age_over_30.ged').us31_list_living_single(debug=True)
+        self.assertEqual(result, expected_ids)
 
 if __name__ == '__main__':
     unittest.main(exit=False, verbosity=2)

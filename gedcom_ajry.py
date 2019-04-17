@@ -118,12 +118,12 @@ class Gedcom:
 
                     'US33': {
                         'fmt_msg': 'The family {}, both parents dead and the children{} less than 18',
-                        'tokens': []  # tokens[i] = (fam_id, inid_id)
+                        'tokens': []  # tokens[i] = (fam_id, indi_id)
                     },
 
                     'US31': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
+                        'fmt_msg': "Individial {}'s age over 30 and has never been married",
+                        'tokens': []  # tokens[i] = (indi_id)
                     },
                 }
             },
@@ -1197,8 +1197,8 @@ class Gedcom:
             data = self.msg_collections['err']['msg_container']['US33']['tokens']
             if data:
                 print('---------Orphans List---------')
-                formated_data = []
                 print(tabulate(data, headers=('Famile ID', 'Individual ID'), tablefmt='fancy_grid', showindex='always'))
+                
 
     def us31_list_living_single(self, debug=False):
         """ Javer, Apr 8
@@ -1209,15 +1209,15 @@ class Gedcom:
 
         for indi in self.indis.values():
             if indi.age >= limit_age and len(indi['fam_s']) == 0 and indi['deat_dt'] == None:
-                living_single_list.append(indi)
+                self.msg_collections['err']['msg_container']['US31']['tokens'].append(indi['indi_id'])
 
         if debug:
-            return living_single_list
+            return self.msg_collections['err']['msg_container']['US31']['tokens']
         else:
-            if living_single_list:
+            data = [[indi_id] for indi_id in self.msg_collections['err']['msg_container']['US31']['tokens']]
+            if data:
                 print(f'---------Living Single List---------')
-                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in living_single_list]
-                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
+                print(tabulate(data, headers=("", "Individual ID"), tablefmt='fancy_grid', showindex='always'))
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -1328,7 +1328,7 @@ def main():
 
     # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
     # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
-    gdm = Gedcom('./GEDCOM_files/us33/us33_ophaned_children_less_than_18.ged')
+    gdm = Gedcom('./GEDCOM_files/us31/us31_living_single_age_over_30.ged')
     # keep the three following lines for the Mongo, we may use this later.
     # mongo_instance = MongoDB()
     # mongo_instance.drop_collection("family")
@@ -1346,7 +1346,7 @@ def main():
     # Javer
     # gdm.us14_multi_birt_less_than_5(True)
     # gdm.us16_male_last_name()
-    gdm.us33_list_orphans()
+    # gdm.us33_list_orphans()
     # gdm.us31_list_living_single()
     
     # # John
