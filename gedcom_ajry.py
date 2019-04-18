@@ -1210,6 +1210,7 @@ class Gedcom:
         """ John, April 17th 2019
             US34 : List all couples who were married when the older spouse was more than twice as old as the younger spouse
         """
+        exist = False
         fam_list = []
         for fam in self.fams.values():
             for indi in self.indis.values():
@@ -1219,14 +1220,17 @@ class Gedcom:
                     wife = indi
             if(fam.marr_dt>husband.birt_dt and fam.marr_dt>wife.birt_dt):
                 if ((fam.marr_dt-husband.birt_dt).days > (fam.marr_dt-wife.birt_dt).days and (fam.marr_dt-husband.birt_dt).days/(fam.marr_dt-wife.birt_dt).days>=2):
+                    exist = True
                     fam_list.append((fam.fam_id, husband.indi_id, ' '.join((husband.name['first'], husband.name['last'])) , wife.indi_id , ' '.join((wife.name['first'], wife.name['last']))))
                 elif((fam.marr_dt-wife.birt_dt).days/(fam.marr_dt-husband.birt_dt).days>=2):
+                    exist = True
                     fam_list.append((fam.fam_id, wife.indi_id, ' '.join((wife.name['first'], wife.name['last'])), husband.indi_id , ' '.join((husband.name['first'], husband.name['last']))))
         if(debug):
             return fam_list
         else:
-            print('---Couples with large age gaps---')
-            print(tabulate (fam_list, headers=('Family ID','Elder spouse ID', 'Elder Spouse Name', 'Younger Spouse ID', 'Younger Spouse Name'), tablefmt='fancy_grid', showindex='always'))
+            if(exist):
+                print('------Couples with large age gaps------')
+                print(tabulate (fam_list, headers=('Family ID','Elder spouse ID', 'Elder Spouse Name', 'Younger Spouse ID', 'Younger Spouse Name'), tablefmt='fancy_grid', showindex='always'))
 
     def us37_list_recent_survivors(self, debug=False):
         """ John, April 17th 2019
@@ -1446,7 +1450,7 @@ def main():
     """ Entrance"""
 
     # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
-    gdm = Gedcom('./GEDCOM_files/huge_all_error.ged') # integrated_no_err.ged | huge_no_error.ged
+    gdm = Gedcom('./GEDCOM_files/huge_no_error.ged') # integrated_no_err.ged | huge_no_error.ged
 
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
@@ -1460,7 +1464,7 @@ def main():
     # gdm.pretty_print()
     #gdm.us29_list_deceased()
     # gdm.msg_print()
-    # gdm.us34_list_large_age_gap()
+    gdm.us34_list_large_age_gap()
     gdm.us37_list_recent_survivors()
     """ User Stories for the Spint """
     # Javer
