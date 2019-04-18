@@ -1206,6 +1206,138 @@ class Gedcom:
                 data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in living_single_list]
                 print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
 
+    def us34_list_large_age_gap(self, debug=False):
+        """ John, April 17th 2019
+            US34 : List all couples who were married when the older spouse was more than twice as old as the younger spouse
+        """
+        fam_list = []
+        for fam in self.fams.values():
+            for indi in self.indis.values():
+                if(indi.indi_id == fam.husb_id):
+                    husband = indi
+                if(indi.indi_id == fam.wife_id):
+                    wife = indi
+            if(fam.marr_dt>husband.birt_dt and fam.marr_dt>wife.birt_dt):
+                if ((fam.marr_dt-husband.birt_dt).days > (fam.marr_dt-wife.birt_dt).days and (fam.marr_dt-husband.birt_dt).days/(fam.marr_dt-wife.birt_dt).days>=2):
+                    fam_list.append((fam.fam_id, husband.indi_id, ' '.join((husband.name['first'], husband.name['last'])) , wife.indi_id , ' '.join((wife.name['first'], wife.name['last']))))
+                elif((fam.marr_dt-wife.birt_dt).days/(fam.marr_dt-husband.birt_dt).days>=2):
+                    fam_list.append((fam.fam_id, wife.indi_id, ' '.join((wife.name['first'], wife.name['last'])), husband.indi_id , ' '.join((husband.name['first'], husband.name['last']))))
+        if(debug):
+            return fam_list
+        else:
+            print('---Couples with large age gaps---')
+            print(tabulate (fam_list, headers=('Family ID','Elder spouse ID', 'Elder Spouse Name', 'Younger Spouse ID', 'Younger Spouse Name'), tablefmt='fancy_grid', showindex='always'))
+
+    def us37_list_recent_survivors(self, debug=False):
+        """ John, April 17th 2019
+            US37 : List all living spouses and descendants of people in a GEDCOM file who died in the last 30 days
+        """
+        fam_list = {}
+        survivor_details = {
+            'death' : [],
+            'survivorList' : {
+                'spouse' : set(),
+                'children' : set()
+            }
+        }
+        
+        for fam in self.fams.values():
+            survivor = False
+            for indi in self.indis.values():
+                if (indi.indi_id == fam.husb_id):
+                    husband = indi
+                if (indi.indi_id == fam.wife_id):
+                    wife = indi
+            if(husband.deat_dt and (datetime.today() - husband.deat_dt).days <= 30 and not wife.deat_dt):
+                survivor = True
+                survivor_details['death'].append(
+                    (
+                        husband.indi_id,
+                        ' '.join((husband.name['first'], husband.name['last'])),
+                        husband.deat_dt.strftime('%Y-%m-%d')
+                    )
+                )
+                survivor_details['survivorList']['spouse'].add(
+                    (
+                        wife.indi_id,
+                        ' '.join((wife.name['first'], wife.name['last']))
+                    )
+                )
+                for child in self._find_children(husband):
+                    survivor_details['survivorList']['children'].add(
+                        (
+                            child.indi_id,
+                            ' '.join((child.name['first'], child.name['last']))
+                        )
+                    )
+            elif(wife.deat_dt and (datetime.today() - husband.deat_dt).days <= 30 and not husband.deat_dt):
+                survivor = True
+                survivor_details['death'].append(
+                    (
+                        wife.indi_id,
+                        ' '.join((wife.name['first'], wife.name['last'])),
+                        wife.deat_dt.strftime('%Y-%m-%d')
+                    )
+                )
+                survivor_details['survivorList']['spouse'].add(
+                    (
+                        husband.indi_id,
+                        ' '.join((husband.name['first'], husband.name['last']))
+                    )
+                )
+                for child in self._find_children(wife):
+                    survivor_details['survivorList']['children'].add(
+                        (
+                            child.indi_id,
+                            ' '.join((child.name['first'], child.name['last']))
+                        )
+                    )
+            elif(wife.deat_dt and husband.deat_dt and ((datetime.today() - husband.deat_dt).days <= 30) and ((datetime.today()-wife.deat_dt).days <=30)):
+                survivor = True
+                survivor_details['death'].append(
+                    (
+                        wife.indi_id,
+                        ' '.join((wife.name['first'], wife.name['last'])),
+                        wife.deat_dt.strftime('%Y-%m-%d')
+                    )
+                )
+                survivor_details['death'].append(
+                    (
+                        husband.indi_id,
+                        ' '.join((husband.name['first'], husband.name['last'])),
+                        husband.deat_dt.strftime('%Y-%m-%d')
+                    )
+                )
+                for child in self._find_children(wife):
+                    survivor_details['survivorList']['children'].add(
+                        (
+                            child.indi_id,
+                            ' '.join((child.name['first'], child.name['last']))
+                        )
+                    )
+                for child in self._find_children(husband):
+                    survivor_details['survivorList']['children'].add(
+                        (
+                            child.indi_id,
+                            ' '.join((child.name['first'], child.name['last']))
+                        )
+                    )
+            if (survivor):
+                fam_list[fam.fam_id] = survivor_details
+        
+        if(debug):
+            return fam_list
+        else:
+            for famId, survivorDetails in fam_list.items():
+                print(f'Survivor list for family ID {famId} for death of :')
+                for tup in survivorDetails['death']:
+                    print(f'{tup[0]} {tup[1]} on {tup[2]}')
+                spouseData = [(stup[0], stup[1], 'Spouse') for stup in survivorDetails['survivorList']['spouse']]
+                childrenData = [(ctup[0], ctup[1], 'Child') for ctup in survivorDetails['survivorList']['children']]
+                print(tabulate(spouseData+childrenData, headers=('Individual ID', 'Name','Relationship'), tablefmt='fancy_grid', showindex='always'))
+            
+            
+
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
 
@@ -1314,7 +1446,7 @@ def main():
     """ Entrance"""
 
     # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
-    gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
+    gdm = Gedcom('./GEDCOM_files/huge_all_error.ged') # integrated_no_err.ged | huge_no_error.ged
 
     # keep the three following lines for the Mongo, we may use this later.
     mongo_instance = MongoDB()
@@ -1328,7 +1460,8 @@ def main():
     # gdm.pretty_print()
     #gdm.us29_list_deceased()
     # gdm.msg_print()
-
+    # gdm.us34_list_large_age_gap()
+    gdm.us37_list_recent_survivors()
     """ User Stories for the Spint """
     # Javer
     #gdm.us14_multi_birt_less_than_5()
