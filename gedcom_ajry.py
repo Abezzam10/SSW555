@@ -125,6 +125,16 @@ class Gedcom:
                         'fmt_msg': "Individial {}'s age over 30 and has never been married",
                         'tokens': []  # tokens[i] = (indi_id)
                     },
+
+                    'US35': {
+                        'fmt_msg': "Individial {} born in the last 30 days",
+                        'tokens': []  # tokens[i] = (indi_id, birt_dt)
+                    },
+
+                    'US36': {
+                        'fmt_msg': "Individial {} died in the last 30 days",
+                        'tokens': []  # tokens[i] = (indi_id, deat_dt)
+                    },
                 }
             },
 
@@ -1198,7 +1208,7 @@ class Gedcom:
             if data:
                 print('---------Orphans List---------')
                 print(tabulate(data, headers=('Famile ID', 'Individual ID'), tablefmt='fancy_grid', showindex='always'))
-                
+
 
     def us31_list_living_single(self, debug=False):
         """ Javer, Apr 8
@@ -1218,6 +1228,49 @@ class Gedcom:
             if data:
                 print(f'---------Living Single List---------')
                 print(tabulate(data, headers=("", "Individual ID"), tablefmt='fancy_grid', showindex='always'))
+
+
+    def us35_list_recent_births(self, debug=False):
+        """ Javer, Apr 17
+            US31: List all people in a GEDCOM file who were born in the last 30 days
+        """
+        limit_days = 30
+        recent_30_days_timestamp = datetime.today().timestamp() - limit_days * 60 * 60 * 24
+        for indi in self.indis.values():
+            birth_dt_timestamp = indi['birt_dt'].timestamp()
+            if birth_dt_timestamp >= recent_30_days_timestamp:
+                self.msg_collections['err']['msg_container']['US35']['tokens'].append([indi['indi_id'], indi['birt_dt'].strftime('%Y-%m-%d')])
+        
+        if debug:
+            return self.msg_collections['err']['msg_container']['US35']['tokens']
+        else:
+            data = self.msg_collections['err']['msg_container']['US35']['tokens']
+            if data:
+                print(f'---------Living recent births---------')
+                print(tabulate(data, headers=("", "Individual ID", "Birth Date"), tablefmt='fancy_grid', showindex='always'))
+
+
+    def us36_list_recent_deaths(self, debug=False):
+        """ Javer, Apr 17
+            US31: List all people in a GEDCOM file who died in the last 30 days
+        """
+        limit_days = 30
+        today_timestamp = datetime.today().timestamp()
+        recent_30_days_timestamp = today_timestamp - limit_days * 60 * 60 * 24
+        for indi in self.indis.values():
+            if indi['deat_dt']:
+                deat_dt_timestamp = indi['deat_dt'].timestamp()
+                if deat_dt_timestamp >= recent_30_days_timestamp and deat_dt_timestamp <= today_timestamp:
+                    self.msg_collections['err']['msg_container']['US36']['tokens'].append([indi['indi_id'], indi['deat_dt'].strftime('%Y-%m-%d')])
+        
+        if debug:
+            return self.msg_collections['err']['msg_container']['US36']['tokens']
+        else:
+            data = self.msg_collections['err']['msg_container']['US36']['tokens']
+            if data:
+                print(f'---------Living recent deaths---------')
+                print(tabulate(data, headers=("", "Individual ID", "Death Date"), tablefmt='fancy_grid', showindex='always'))
+
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
@@ -1328,7 +1381,7 @@ def main():
 
     # gdm = Gedcom('./GEDCOM_files/us29/us29_some_deaths.ged')
     # gdm = Gedcom('./GEDCOM_files/integrated_no_err.ged') # integrated_no_err.ged | huge_no_error.ged
-    gdm = Gedcom('./GEDCOM_files/us31/us31_living_single_age_over_30.ged')
+    
     # keep the three following lines for the Mongo, we may use this later.
     # mongo_instance = MongoDB()
     # mongo_instance.drop_collection("family")
@@ -1348,6 +1401,8 @@ def main():
     # gdm.us16_male_last_name()
     # gdm.us33_list_orphans()
     # gdm.us31_list_living_single()
+    # gdm.us35_list_recent_births()
+    # gdm.us36_list_recent_deaths()
     
     # # John
     # gdm.us03_birth_before_death()
