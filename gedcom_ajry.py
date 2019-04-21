@@ -1399,7 +1399,6 @@ def main():
     # gdm.us02_birth_before_marriage()
     # gdm.us11_no_bigamy()
     # print(gdm.us08_birt_b4_marr_of_par())
-    # gdm.us39_list_anniversaries()
 
     # gdm.us13_sibling_spacing()
     # gdm.msg_print()
