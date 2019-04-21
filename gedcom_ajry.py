@@ -1206,6 +1206,57 @@ class Gedcom:
                 data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in living_single_list]
                 print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
 
+    def us39_list_anniversaries(self, debug=False):
+        """ Ray, Apr 21
+            US39: List all living couples in a GEDCOM file whose marriage anniversaries occur in the next 30 days
+        """
+        
+        curr_date = datetime.today()
+        anniversaries_list = []
+
+        for fam in self.fams.values():
+            
+            curr_year = datetime.today().year
+            diff_year = datetime.today().year - fam.marr_dt.year
+            diff_day = (fam.marr_dt - curr_date).days
+            final = abs(diff_day) - (diff_year * 365.25)
+
+            if final > 0 and final <= 30: 
+                anniversaries_list.append(fam)
+
+        if debug:
+            return anniversaries_list
+        else:
+            if anniversaries_list:
+                print('---------Anniversaries List---------')
+                data = [(fam.husb_id, fam.wife_id, fam.marr_dt) for fam in anniversaries_list]
+                print(tabulate(data, headers=('Husband ID', 'Wife ID', 'Marriage Date'), tablefmt='fancy_grid', showindex='always'))
+
+    
+    def us32_list_multiple_births(self, debug=False):
+        """ Ray, Apr 21
+            US32: List all multiple births in a GEDCOM file
+        """
+        
+        multiple_birth_list = []
+
+        for fam in self.fams.values():
+            for child in fam.chil_id:
+                for indi in self.indis.values():
+                    if indi.indi_id == child:
+                        for indi2 in self.indis.values(): 
+                            if indi2.indi_id != indi.indi_id and indi2.fam_c == indi.fam_c and indi2.birt_dt == indi.birt_dt:
+                                if fam not in multiple_birth_list: 
+                                    multiple_birth_list.append(fam)
+    
+        if debug:
+            return multiple_birth_list
+        else:
+            if multiple_birth_list:
+                print('---------Multiple Births List---------')
+                data = [(fam.husb_id, fam.wife_id, fam.chil_id) for fam in multiple_birth_list]
+                print(tabulate(data, headers=('Husband ID', 'Wife ID', 'Children ID'), tablefmt='fancy_grid', showindex='always'))
+
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
 
@@ -1348,9 +1399,11 @@ def main():
     # gdm.us02_birth_before_marriage()
     # gdm.us11_no_bigamy()
     # print(gdm.us08_birt_b4_marr_of_par())
+    # gdm.us39_list_anniversaries()
 
     # gdm.us13_sibling_spacing()
     # gdm.msg_print()
+
 
 if __name__ == "__main__":
     main()
