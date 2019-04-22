@@ -9,11 +9,10 @@ from gedcom_ajry import Gedcom
 class test_us33(unittest.TestCase):
     """ Test cases for US33"""
 
-    def test_list_living_single(self):
-        expected = []
-        result = Gedcom('./GEDCOM_files/integrated_no_err.ged').us33_list_orphans(debug=True)
+    def test_list_orphans_less_than_18(self):
+        expected = [("@F7@", "@I14@")]
+        result = Gedcom('./GEDCOM_files/us33/us33_ophaned_children_less_than_18.ged').us33_list_orphans(debug=True)
         self.assertEqual(result, expected)
-
 
 if __name__ == '__main__':
     unittest.main(exit=False, verbosity=2)

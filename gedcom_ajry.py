@@ -117,13 +117,23 @@ class Gedcom:
                     },
 
                     'US33': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
+                        'fmt_msg': 'The family {}, both parents dead and the children{} less than 18',
+                        'tokens': []  # tokens[i] = (fam_id, indi_id)
                     },
 
                     'US31': {
-                        'fmt_msg': '',
-                        'tokens': []  # tokens[i] = 
+                        'fmt_msg': "Individial {}'s age over 30 and has never been married",
+                        'tokens': []  # tokens[i] = (indi_id)
+                    },
+
+                    'US35': {
+                        'fmt_msg': "Individial {} born in the last 30 days",
+                        'tokens': []  # tokens[i] = (indi_id, birt_dt)
+                    },
+
+                    'US36': {
+                        'fmt_msg': "Individial {} died in the last 30 days",
+                        'tokens': []  # tokens[i] = (indi_id, deat_dt)
                     },
                 }
             },
@@ -796,13 +806,24 @@ class Gedcom:
         """
         for fam_id, fam in self.fams.items():
             if len(fam.chil_id) > 5:
-                self.msg_collections['err']['msg_container']['US14']['tokens'].append(
-                    (
-                        fam_id,
-                        5,
-                        len(fam.chil_id)
+                birth_dict = {}
+                for indi_id in fam.chil_id:
+                    tmp_birth_date = self.indis[indi_id].birt_dt.strftime("%Y%d%m")
+                    if tmp_birth_date not in birth_dict.keys():
+                        birth_dict[tmp_birth_date] = []
+                        birth_dict[tmp_birth_date].append(indi_id)
+                    else:
+                        birth_dict[tmp_birth_date].append(indi_id)
+                    
+                for birth_date in birth_dict:
+                    if len(birth_dict[birth_date]) > 5:
+                        self.msg_collections['err']['msg_container']['US14']['tokens'].append(
+                        (
+                            fam_id,
+                            5,
+                            len(birth_dict[birth_date])
+                        )
                     )
-                )
 
         if debug:
             return self.msg_collections['err']['msg_container']['US14']['tokens']
@@ -1177,15 +1198,17 @@ class Gedcom:
                     age_turn_orph = (age_turn_orph_dt.days + age_turn_orph_dt.seconds // 86400) // 365  # get the age of child when turn orphan
 
                     if age_turn_orph <= limit_age:
-                        orphans_list.append(child)
+                        self.msg_collections['err']['msg_container']['US33']['tokens'].append((fam.fam_id, child.indi_id))
+
 
         if debug:
-            return orphans_list
+            return self.msg_collections['err']['msg_container']['US33']['tokens']
         else:
-            if orphans_list:
+            data = self.msg_collections['err']['msg_container']['US33']['tokens']
+            if data:
                 print('---------Orphans List---------')
-                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in orphans_list]
-                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
+                print(tabulate(data, headers=('Famile ID', 'Individual ID'), tablefmt='fancy_grid', showindex='always'))
+
 
     def us31_list_living_single(self, debug=False):
         """ Javer, Apr 8
@@ -1196,15 +1219,58 @@ class Gedcom:
 
         for indi in self.indis.values():
             if indi.age >= limit_age and len(indi['fam_s']) == 0 and indi['deat_dt'] == None:
-                living_single_list.append(indi)
+                self.msg_collections['err']['msg_container']['US31']['tokens'].append(indi['indi_id'])
 
         if debug:
-            return living_single_list
+            return self.msg_collections['err']['msg_container']['US31']['tokens']
         else:
-            if living_single_list:
+            data = [[indi_id] for indi_id in self.msg_collections['err']['msg_container']['US31']['tokens']]
+            if data:
                 print(f'---------Living Single List---------')
-                data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in living_single_list]
-                print(tabulate(data, headers=('Individual ID', 'Name', 'Age'), tablefmt='fancy_grid', showindex='always'))
+                print(tabulate(data, headers=("", "Individual ID"), tablefmt='fancy_grid', showindex='always'))
+
+
+    def us35_list_recent_births(self, debug=False):
+        """ Javer, Apr 17
+            US31: List all people in a GEDCOM file who were born in the last 30 days
+        """
+        limit_days = 30
+        recent_30_days_timestamp = datetime.today().timestamp() - limit_days * 60 * 60 * 24
+        for indi in self.indis.values():
+            birth_dt_timestamp = indi['birt_dt'].timestamp()
+            if birth_dt_timestamp >= recent_30_days_timestamp:
+                self.msg_collections['err']['msg_container']['US35']['tokens'].append([indi['indi_id'], indi['birt_dt'].strftime('%Y-%m-%d')])
+        
+        if debug:
+            return self.msg_collections['err']['msg_container']['US35']['tokens']
+        else:
+            data = self.msg_collections['err']['msg_container']['US35']['tokens']
+            if data:
+                print(f'---------Living recent births---------')
+                print(tabulate(data, headers=("", "Individual ID", "Birth Date"), tablefmt='fancy_grid', showindex='always'))
+
+
+    def us36_list_recent_deaths(self, debug=False):
+        """ Javer, Apr 17
+            US31: List all people in a GEDCOM file who died in the last 30 days
+        """
+        limit_days = 30
+        today_timestamp = datetime.today().timestamp()
+        recent_30_days_timestamp = today_timestamp - limit_days * 60 * 60 * 24
+        for indi in self.indis.values():
+            if indi['deat_dt']:
+                deat_dt_timestamp = indi['deat_dt'].timestamp()
+                if deat_dt_timestamp >= recent_30_days_timestamp and deat_dt_timestamp <= today_timestamp:
+                    self.msg_collections['err']['msg_container']['US36']['tokens'].append([indi['indi_id'], indi['deat_dt'].strftime('%Y-%m-%d')])
+        
+        if debug:
+            return self.msg_collections['err']['msg_container']['US36']['tokens']
+        else:
+            data = self.msg_collections['err']['msg_container']['US36']['tokens']
+            if data:
+                print(f'---------Living recent deaths---------')
+                print(tabulate(data, headers=("", "Individual ID", "Death Date"), tablefmt='fancy_grid', showindex='always'))
+
 
     def us34_list_large_age_gap(self, debug=False):
         """ John, April 17th 2019
@@ -1503,10 +1569,10 @@ def main():
     gdm = Gedcom('./GEDCOM_files/huge_no_error.ged') # integrated_no_err.ged | huge_no_error.ged
 
     # keep the three following lines for the Mongo, we may use this later.
-    mongo_instance = MongoDB()
-    mongo_instance.drop_collection("family")
-    mongo_instance.drop_collection("individual")
-    gdm.insert_to_mongo() 
+    # mongo_instance = MongoDB()
+    # mongo_instance.drop_collection("family")
+    # mongo_instance.drop_collection("individual")
+    # gdm.insert_to_mongo() 
     # mongo_instance.delete_database()
 
     #gdm.us23_unique_name_and_birt(debug=True)
@@ -1518,10 +1584,12 @@ def main():
     gdm.us37_list_recent_survivors()
     """ User Stories for the Spint """
     # Javer
-    #gdm.us14_multi_birt_less_than_5()
+    # gdm.us14_multi_birt_less_than_5(True)
     # gdm.us16_male_last_name()
     # gdm.us33_list_orphans()
     # gdm.us31_list_living_single()
+    # gdm.us35_list_recent_births()
+    # gdm.us36_list_recent_deaths()
     
     # # John
     # gdm.us03_birth_before_death()
