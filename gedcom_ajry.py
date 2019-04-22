@@ -1510,7 +1510,7 @@ class Individual(Entity):
 
     @property
     def age(self):
-        """ return the age of this individual"""
+        """ US27: return the age of this individual"""
         if self.birt_dt:
             age_td = datetime.today() - self.birt_dt if not self.deat_dt else self.deat_dt - self.birt_dt
             return (age_td.days + age_td.seconds // 86400) // 365

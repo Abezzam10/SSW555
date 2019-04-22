@@ -1,5 +1,4 @@
 """ Command Line Interface for gedcom-benji"""
-
 import os
 import click
 from gedcom_ajry import Gedcom
@@ -109,3 +108,13 @@ def us39(gedfile):
 def us27(gedfile):
     """US27: Individual age"""
     Gedcom(gedfile).us27_include_individuals_age()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us42(gedfile):
+    """US42: Reject invalid datetime, print error msg if there is one other wise pretty print the file"""
+    try:
+        Gedcom(gedfile).pretty_print()
+    except ValueError as e:
+        print(f'Error US42: {e}')
+        exit()
