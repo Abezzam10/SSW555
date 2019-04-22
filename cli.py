@@ -68,3 +68,44 @@ def us33(gedfile):
     """US33: List orphan"""
     Gedcom(gedfile).us33_list_orphans()
     
+@gedcom.command()
+@click.argument('gedfile')
+def us32(gedfile):
+    """US32: List multiple births"""
+    Gedcom(gedfile).us32_list_multiple_births()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us34(gedfile):
+    """US34: List large age differences"""
+    Gedcom(gedfile).us34_list_large_age_gap()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us35(gedfile):
+    """US35: List recent births"""
+    Gedcom(gedfile).us35_list_recent_births()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us36(gedfile):
+    """US36: List recent deaths"""
+    Gedcom(gedfile).us36_list_recent_deaths()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us37(gedfile):
+    """US37: List recent survivors"""
+    Gedcom(gedfile).us37_list_recent_survivors()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us39(gedfile):
+    """US39: List upcoming anniversaries"""
+    Gedcom(gedfile).us39_list_anniversaries()
+
+@gedcom.command()
+@click.argument('gedfile')
+def us27(gedfile):
+    """US27: Individual age"""
+    Gedcom(gedfile).us27_include_individuals_age()

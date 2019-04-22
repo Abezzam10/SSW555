@@ -270,8 +270,11 @@ class Gedcom:
 
                 if tag in ('BIRT', 'DEAT', 'MARR', 'DIV'):  # the arg are None, go to next line get the arg for val
                     ln_ind, lvl, tag, arg = next(data_iter)
-                    #if tag == '2' and arg == 'DATE' *NOTE* this is not needed for this project as we assume this is not grammar error
-                    curr_entity[attr] = datetime.strptime(arg, Gedcom.dt_fmt)
+
+                    try:  # NOTE: this try/except block if for the User Story 42
+                        curr_entity[attr] = datetime.strptime(arg, Gedcom.dt_fmt)
+                    except ValueError:
+                        raise ValueError(f'The given datetime {arg} of {tag} is not valid!!')
 
                 elif tag == 'NAME':  # use regex to extract the first name and last name, SHOW OFF PURPOSE ONLY :P
                     regex_obj = re.search(Gedcom.names_regex, arg)
@@ -1082,7 +1085,7 @@ class Gedcom:
         deceased_info = {}
         for indi in self.indis.values():
             if indi.deat_dt:
-               deceased_info[indi.indi_id]= ' '.join((indi.name['first'], indi.name['last']))
+                deceased_info[indi.indi_id]= ' '.join((indi.name['first'], indi.name['last']))
 
         if debug:
             return deceased_info
@@ -1209,7 +1212,6 @@ class Gedcom:
                 print('---------Orphans List---------')
                 print(tabulate(data, headers=('Famile ID', 'Individual ID'), tablefmt='fancy_grid', showindex='always'))
 
-
     def us31_list_living_single(self, debug=False):
         """ Javer, Apr 8
             US31: List all living people over 30 who have never been married in a GEDCOM file
@@ -1229,7 +1231,6 @@ class Gedcom:
                 print(f'---------Living Single List---------')
                 print(tabulate(data, headers=("", "Individual ID"), tablefmt='fancy_grid', showindex='always'))
 
-
     def us35_list_recent_births(self, debug=False):
         """ Javer, Apr 17
             US31: List all people in a GEDCOM file who were born in the last 30 days
@@ -1248,7 +1249,6 @@ class Gedcom:
             if data:
                 print(f'---------Living recent births---------')
                 print(tabulate(data, headers=("", "Individual ID", "Birth Date"), tablefmt='fancy_grid', showindex='always'))
-
 
     def us36_list_recent_deaths(self, debug=False):
         """ Javer, Apr 17
@@ -1270,7 +1270,6 @@ class Gedcom:
             if data:
                 print(f'---------Living recent deaths---------')
                 print(tabulate(data, headers=("", "Individual ID", "Death Date"), tablefmt='fancy_grid', showindex='always'))
-
 
     def us34_list_large_age_gap(self, debug=False):
         """ John, April 17th 2019
@@ -1406,7 +1405,6 @@ class Gedcom:
                 childrenData = [(ctup[0], ctup[1], 'Child') for ctup in survivorDetails['survivorList']['children']]
                 print(tabulate(spouseData+childrenData, headers=('Individual ID', 'Name','Relationship'), tablefmt='fancy_grid', showindex='always'))
             
-            
     def us39_list_anniversaries(self, debug=False):
         """ Ray, Apr 21
             US39: List all living couples in a GEDCOM file whose marriage anniversaries occur in the next 30 days
@@ -1457,6 +1455,19 @@ class Gedcom:
                 print('---------Multiple Births List---------')
                 data = [(fam.husb_id, fam.wife_id, fam.chil_id) for fam in multiple_birth_list]
                 print(tabulate(data, headers=('Husband ID', 'Wife ID', 'Children ID'), tablefmt='fancy_grid', showindex='always'))
+
+    def us27_include_individuals_age(self, debug=False):
+        """ Benji, Apr 21th, 2019
+            US27: Include individuals ages
+        """
+        data = [(indi.indi_id, ' '.join((indi.name['first'], indi.name['last'])), indi.age) for indi in self.indis.values()]
+        header = ('Individual ID', 'Individual Name', 'Individual Age')
+
+        if debug:
+            return data
+        else:
+            print(f'---------Individual Age---------')
+            print(tabulate(data, headers=header, tablefmt='fancy_grid', showindex='always'))
 
 class Entity:
     """ ABC for Individual and Family, define __getitem__ and __setitem__."""
